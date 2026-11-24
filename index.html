@@ -117,7 +117,7 @@ table.pr td{padding:4px 3px;vertical-align:middle}
         <div style="width:110px"><label for="yl">Yard line</label><input id="yl" type="number" inputmode="numeric" placeholder="-35 / +20"></div>
         <div style="width:120px"><label for="type">Type</label><select id="type"></select></div>
       </div>
-      <div class="row"><div style="width:130px"><label for="wb">Wristband #</label><input id="wb" inputmode="numeric" autocomplete="off" placeholder="e.g. 12"></div><div style="width:130px"><label for="mcs">Play #</label><input id="mcs" inputmode="numeric" autocomplete="off" placeholder="library #"></div><span class="note" id="wbMsg" style="padding-bottom:12px"></span></div>
+      <div class="row"><div style="width:130px"><label for="wb">Wristband #</label><input id="wb" autocomplete="off" placeholder="12 or F12"></div><div><label>&nbsp;</label><button type="button" id="flip" aria-pressed="false" title="Flip the call: right ↔ left">Flip</button></div><div style="width:130px"><label for="mcs">Play #</label><input id="mcs" inputmode="numeric" autocomplete="off" placeholder="library #"></div><span class="note" id="wbMsg" style="padding-bottom:12px"></span></div>
       <label for="call">Call — type it the way it's signaled; known words fill the boxes below</label>
       <input id="call" autocomplete="off" placeholder="e.g. 11 TREY GUN JET IZ BUBBLE  /  OVER TEX COVER 3">
       <div class="chips" id="chips"></div>
@@ -235,7 +235,7 @@ SAMPLE_LIB.push(...[['1','Base','BASE','BASE OVER COVER 3'],['2','Base','NICKEL'
 {const d5=SAMPLE_LIB.find(e=>e.u==='D'&&e.id==='5');d5.draw={pl:{M:[300,150]},st:[{c:'r',d:0,p:[[300,150],[300,178],[316,200]]},{c:'k',d:0,p:[[222,172],[214,200]]},{c:'k',d:0,p:[[378,172],[386,200]]},{c:'k',d:0,p:[[282,172],[268,200]]},{c:'k',d:0,p:[[318,172],[334,200]]},{c:'k',d:1,p:[[230,128],[200,100]]},{c:'k',d:1,p:[[400,128],[430,100]]}]};
  const k1=SAMPLE_LIB.find(e=>e.u==='K'&&e.id==='1');k1.draw={pl:{},st:[[100,40],[150,50],[200,58],[245,62],[280,66],[320,66],[355,62],[400,58],[450,50],[500,40]].map(([x,y],i)=>({c:i===2||i===7?'r':'k',d:0,p:[[[100,150,200,245,280,320,355,400,450,500][i],196],[x,y]]}))}}
 const SAMPLE_WB={k:'1 = 1\n2 = 2\n3 = 3\n4 = 10\n5 = 11\n6 = 20\n7 = 21\n8 = 30\n9 = 31\n10 = 40\n11 = 50',o:'1 = 1\n2 = 20\n3 = 3\n4 = 10\n5 = 100\n6 = 200\n7 = 202\n8 = 201\n9 = 300\n10 = 400\n11 = 11\n12 = 101\n13 = 203\n14 = 21\n15 = 2',d:'1 = 1\n2 = 2\n3 = 3\n4 = 4\n5 = 5\n6 = 6\n7 = 7\n8 = 8\n9 = 9\n10 = 10'};
-const DEF_RULES={s1:40,s2:60,er:10,ep:15,zones:'Coming Out = 99-80\nOpen Field = 79-36\nAttack = 35-21\nRed Zone = 20-1'};
+const DEF_RULES={flip:'RT = LT\nRIGHT = LEFT',s1:40,s2:60,er:10,ep:15,zones:'Coming Out = 99-80\nOpen Field = 79-36\nAttack = 35-21\nRed Zone = 20-1'};
 
 let S;
 const blankEntry=()=>({odk:'O',qtr:1,hash:'M',down:1,dist:10,yl:'',type:'Run',res:'',f:{}});
@@ -363,8 +363,8 @@ function vPly(ps){const o=indiv(ps.filter(p=>p.odk==='O')),th=indiv(ps.filter(p=
    for(const n of String(p.tk||'').split(/[ ,]+/).filter(Boolean)){if(isI&&!p.ib)break;if(!tk.has(n))tk.set(n,[0,0,0,0,0]);const a=tk.get(n);a[0]++;if(p.res==='Sack')a[1]++;if(p.rp==='R'&&(+p.gain||0)<0)a[2]++}}
   $('v-ply').innerHTML=`<h2>Players</h2><div class="two"><div><h3 style="font-size:24px">${esc(S.us)}</h3>${pTable('Rushing',o.ru,['Att','Yds','TD','Fum'])}${pTable('Passing',o.pa,['Comp/att','Yds','INT'])}${pTable('Receiving',o.re,['Rec','Yds','TD'])}${pTable('Tackles & INTs',tk,['Tkl','Sack','TFL','INT','INT yds'])}</div>
   <div><h3 style="font-size:24px">${esc(S.opp)}</h3>${pTable('Rushing',th.ru,['Att','Yds','TD','Fum'])}${pTable('Passing',th.pa,['Comp/att','Yds','INT'])}${pTable('Receiving',th.re,['Rec','Yds','TD'])}</div></div>`}
-const callTxt=p=>p.odk==='K'?((S.lib||[]).find(e=>e.u==='K'&&e.id===p.mcs)?.call||''):CATS.map(c=>p.f[c.k]).filter(Boolean).join(' ');
-function vLog(ps){$('logT').innerHTML=`<thead><tr><th>#</th><th>Unit</th><th>Q</th><th>Ser</th><th>D&amp;D</th><th>Yard ln</th><th>Hash</th><th>WB</th><th>Play #</th><th>Type</th><th>Call</th><th>Result</th><th class="n">Gain</th><th>Eff</th></tr></thead><tbody>${[...ps].reverse().map(p=>`<tr data-n="${p.n}"><td>${p.n}</td><td><span class="tag ${p.odk}">${p.odk}</span></td><td>${p.qtr}</td><td>${p.ser}</td><td>${p.odk==='K'?'':esc(p.down+'&'+p.dist)}</td><td>${esc(p.yl)}</td><td>${esc(p.hash)}</td><td>${esc(p.wb||'')}</td><td>${esc(p.mcs||'')}</td><td>${esc(p.type)}</td><td>${esc(callTxt(p))}</td><td>${esc(p.res)}</td><td class="n">${p.odk==='K'?esc(p.ky||''):p.gain===''?'<span class="note">next spot</span>':esc(p.gain)}</td><td>${p.ok==null?'':p.ok?'Y':'N'}</td></tr>`).join('')}</tbody>`}
+const callTxt=p=>p.odk==='K'?((c=>p.flip?flipCall(c):c)((S.lib||[]).find(e=>e.u==='K'&&e.id===p.mcs)?.call||'')):(p.raw||CATS.map(c=>p.f[c.k]).filter(Boolean).join(' '));
+function vLog(ps){$('logT').innerHTML=`<thead><tr><th>#</th><th>Unit</th><th>Q</th><th>Ser</th><th>D&amp;D</th><th>Yard ln</th><th>Hash</th><th>WB</th><th>Play #</th><th>Type</th><th>Call</th><th>Result</th><th class="n">Gain</th><th>Eff</th></tr></thead><tbody>${[...ps].reverse().map(p=>`<tr data-n="${p.n}"><td>${p.n}</td><td><span class="tag ${p.odk}">${p.odk}</span></td><td>${p.qtr}</td><td>${p.ser}</td><td>${p.odk==='K'?'':esc(p.down+'&'+p.dist)}</td><td>${esc(p.yl)}</td><td>${esc(p.hash)}</td><td>${p.flip?'F':''}${esc(p.wb||'')}</td><td>${esc(p.mcs||'')}</td><td>${esc(p.type)}</td><td>${esc(callTxt(p))}</td><td>${esc(p.res)}</td><td class="n">${p.odk==='K'?esc(p.ky||''):p.gain===''?'<span class="note">next spot</span>':esc(p.gain)}</td><td>${p.ok==null?'':p.ok?'Y':'N'}</td></tr>`).join('')}</tbody>`}
 
 /* ---------- live read ---------- */
 function vRead(ps){const e=S.e;const r=$('read');
@@ -404,7 +404,7 @@ function savePlay(){readForm();const e=S.e;if(!e.res){flash('res');return}
   const ps=derive();const n=S.edit||nextN();const old=S.edit?S.plays.find(p=>p.n===n):null;
   const ser=old?old.ser:(e.odk==='K'?(ps.length?ps[ps.length-1].ser:1):curSer(ps));
   const p={n,odk:e.odk,qtr:e.qtr,ser,hash:e.hash,down:e.odk==='K'?'':e.down,dist:e.odk==='K'?'':e.dist,yl:e.yl,type:e.type,res:e.res,f:{...e.f},
-    gain:$('gain').value,wb:$('wb').value.trim(),mcs:$('mcs').value.trim(),ib:$('ib').value.trim(),iy:$('iy').value,ball:$('ball').value.trim(),qb:$('qb').value.trim(),tk:$('tk').value.trim(),kk:$('kk').value.trim(),ky:$('ky').value,rt:$('rt').value.trim(),ry:$('ry').value,notes:$('notes').value.trim()};
+    gain:$('gain').value,wb:$('wb').value.trim().toUpperCase().replace(/^(?:FLIP|F)\s*/,''),flip:flipOn,raw:$('call').value.trim().toUpperCase(),mcs:$('mcs').value.trim(),ib:$('ib').value.trim(),iy:$('iy').value,ball:$('ball').value.trim(),qb:$('qb').value.trim(),tk:$('tk').value.trim(),kk:$('kk').value.trim(),ky:$('ky').value,rt:$('rt').value.trim(),ry:$('ry').value,notes:$('notes').value.trim()};
   if(e.odk!=='K'){const sp=$('spot').value,y0=ytg(p.yl);if(sp!==''&&y0!=null&&ytg(sp)!=null)p.gain=String(y0-ytg(sp));else if(p.gain===''&&['Incomplete','INT','INT TD'].includes(p.res))p.gain='0';else if(p.gain===''&&/TD/.test(p.res)&&y0!=null)p.gain=String(y0)}
   const g=+p.gain||0,tdEnd=/TD|Safety/.test(p.res)||TO.includes(p.res);
   p.end=e.odk!=='K'&&($('send').checked||tdEnd||(+p.down===4&&g<+p.dist));
@@ -422,16 +422,16 @@ function nextFrom(p,keep){const e=blankEntry();e.qtr=p.qtr;e.hash='M';if(keep)re
   const ny=y==null?null:y-g;if(ny!=null)e.yl=fromYtg(ny);
   if(g>=+p.dist){e.down=1;e.dist=ny!=null&&ny<10?ny:10}else{e.down=Math.min(4,+p.down+1);e.dist=Math.max(1,+p.dist-g)}
   e.hash=p.hash;return e}
-function clearInputs(){for(const id of['spot','wb','mcs','ib','iy','call','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(id).value='';$('send').checked=false;$('chips').innerHTML='';$('wbMsg').textContent=''}
+function clearInputs(){if($('flip'))setFlip(false);for(const id of['spot','wb','mcs','ib','iy','call','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(id).value='';$('send').checked=false;$('chips').innerHTML='';$('wbMsg').textContent=''}
 function flash(id){const el=$(id);el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
 function loadForEdit(n){const p=S.plays.find(x=>x.n===n);if(!p)return;S.edit=n;
   S.e={odk:p.odk,qtr:p.qtr,hash:p.hash,down:p.down||1,dist:p.dist||10,yl:p.yl,type:p.type,res:p.res,f:{...p.f}};
-  for(const k of['wb','mcs','ib','iy','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(k).value=p[k]??'';$('call').value=callTxt(p);$('send').checked=!!p.end;show('chart');render()}
+  setFlip(!!p.flip);for(const k of['wb','mcs','ib','iy','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(k).value=p[k]??'';$('call').value=callTxt(p);$('send').checked=!!p.end;show('chart');render()}
 
 /* ---------- setup ---------- */
 function renderSetup(){S.wb=S.wb||{o:'',d:''};$('wb-o').value=S.wb.o||'';$('wb-d').value=S.wb.d||'';$('wb-k').value=S.wb.k||'';$('vocab').innerHTML=CATS.map(c=>`<div><label for="v-${c.k}">${c.l}${c.fam?' = family':''}${c.k==='play'?' (R/P, family)':''}</label><textarea id="v-${c.k}" data-k="${c.k}">${esc(S.vocab[c.k]||'')}</textarea></div>`).join('');
   const R=[['s1','1st down success % of distance'],['s2','2nd down success % of distance'],['er','Explosive run (yds)'],['ep','Explosive pass (yds)']];
-  $('rules').innerHTML=`<div><label for="r-field">Field style</label><select id="r-field" data-r="field"><option value="turf" ${(S.rules.field||'turf')==='turf'?'selected':''}>Turf (green)</option><option value="white" ${S.rules.field==='white'?'selected':''}>Whiteboard</option></select></div><div><label for="r-hashes">Hash marks</label><select id="r-hashes" data-r="hashes">${[['college','College'],['hs','High school'],['nfl','NFL']].map(([k,l])=>`<option value="${k}" ${(S.rules.hashes||'college')===k?'selected':''}>${l}</option>`).join('')}</select></div>`+R.map(([k,l])=>`<div><label for="r-${k}">${l}</label><input id="r-${k}" data-r="${k}" type="number" value="${esc(S.rules[k])}"></div>`).join('')+`<div style="grid-column:1/-1"><label for="r-zones">Field zones (yards to goal, 99 = own 1)</label><textarea id="r-zones" data-r="zones" style="min-height:110px">${esc(S.rules.zones)}</textarea></div>`}
+  $('rules').innerHTML=`<div style="grid-column:1/-1"><label for="r-flip">Flip pairs — one per line; Flip swaps each pair both ways (add run numbers or tags like 31 = 30, ZORRO = ZULU)</label><textarea id="r-flip" data-r="flip" style="min-height:90px">${esc(S.rules.flip??DEF_RULES.flip)}</textarea></div><div><label for="r-field">Field style</label><select id="r-field" data-r="field"><option value="turf" ${(S.rules.field||'turf')==='turf'?'selected':''}>Turf (green)</option><option value="white" ${S.rules.field==='white'?'selected':''}>Whiteboard</option></select></div><div><label for="r-hashes">Hash marks</label><select id="r-hashes" data-r="hashes">${[['college','College'],['hs','High school'],['nfl','NFL']].map(([k,l])=>`<option value="${k}" ${(S.rules.hashes||'college')===k?'selected':''}>${l}</option>`).join('')}</select></div>`+R.map(([k,l])=>`<div><label for="r-${k}">${l}</label><input id="r-${k}" data-r="${k}" type="number" value="${esc(S.rules[k])}"></div>`).join('')+`<div style="grid-column:1/-1"><label for="r-zones">Field zones (yards to goal, 99 = own 1)</label><textarea id="r-zones" data-r="zones" style="min-height:110px">${esc(S.rules.zones)}</textarea></div>`}
 
 /* ---------- csv ---------- */
 const COLS=['n','odk','qtr','ser','hash','down','dist','yl','wb','mcs','type',...CATS.map(c=>'f.'+c.k),'res','gain','ball','qb','tk','ib','iy','kk','ky','rt','ry','end','notes'];
@@ -748,11 +748,16 @@ $('yl').addEventListener('change',()=>{readForm();const e=S.e;const ny=ytg(e.yl)
 $('spot').addEventListener('input',()=>{const y0=ytg($('yl').value),y1=ytg($('spot').value);$('gain').value=y0!=null&&y1!=null?y0-y1:''});
 $('call').addEventListener('input',ev=>{onCall(ev);const L=libByCall($('call').value);$('mcs').value=L?L.id:'';$('wbMsg').textContent=L?'Matches library play '+L.id:''});
 $('mcs').addEventListener('input',()=>{const L=libGet($('mcs').value);if(L){fillFromLib(L);if(S.e.odk!=='K')$('wbMsg').textContent='Library call '+L.id}else $('wbMsg').textContent=$('mcs').value?'Not in the library':''});
-function fillFromLib(L){if(S.e.odk==='K'){if(KT.includes(L.sec)&&S.e.type!==L.sec){S.e.type=L.sec;S.e.res='';const m=$('mcs').value,w=$('wb').value;render();$('mcs').value=m;$('wb').value=w}$('wbMsg').textContent=L.id+': '+L.call;return}$('call').value=L.call;onCall(null,L.call,S.e.odk==='D')}
+function fillFromLib(L){const call=flipOn?flipCall(L.call):L.call;if(S.e.odk==='K'){if(KT.includes(L.sec)&&S.e.type!==L.sec){S.e.type=L.sec;S.e.res='';const m=$('mcs').value,w=$('wb').value;render();$('mcs').value=m;$('wb').value=w}$('wbMsg').textContent=L.id+': '+call+(flipOn?' (flipped)':'');return}$('call').value=call;onCall(null,call,S.e.odk==='D')}
 function wbMap(side){const m={};for(const l of String((S.wb||{})[side]||'').split('\n')){const i=l.indexOf('=');if(i>0)m[l.slice(0,i).trim().toUpperCase()]=l.slice(i+1).trim()}return m}
-$('wb').addEventListener('input',()=>{const k=$('wb').value.trim().toUpperCase();
-  const m=wbMap(SIDE[S.e.odk]);const c=m[k];
-  if(c){const L=libGet(c);if(L){$('mcs').value=L.id;fillFromLib(L);$('wbMsg').textContent=`Card #${k} → ${L.id}: ${L.call}`;return}if(S.e.odk==='K'){$('wbMsg').textContent=c;return}
+let flipOn=false;
+function flipPairs(){const m={};for(const l of String(S.rules.flip??DEF_RULES.flip).split('\n')){const[a,b]=l.split('=').map(x=>(x||'').trim().toUpperCase());if(a&&b){m[a]=b;m[b]=a}}return m}
+function flipCall(s){const m=flipPairs();return String(s||'').split(/(\s+)/).map(t=>{const u=t.toUpperCase();if(m[u])return m[u];const mm=u.match(/^([(\[]?)(.*?)([)\],.]?)$/);return mm&&m[mm[2]]?mm[1]+m[mm[2]]+mm[3]:t}).join('')}
+function setFlip(on){flipOn=on;$('flip').classList.toggle('on',on);$('flip').setAttribute('aria-pressed',on);$('flip').textContent=on?'Flipped ⇄':'Flip'}
+$('flip').addEventListener('click',()=>{setFlip(!flipOn);const L=libGet($('mcs').value);if(L)fillFromLib(L);else if($('call').value){$('call').value=flipCall($('call').value);onCall()}});
+$('wb').addEventListener('input',()=>{let k=$('wb').value.trim().toUpperCase();const fm=k.match(/^(?:FLIP|F)\s*(.+)$/);if(fm){k=fm[1];if(!flipOn)setFlip(true)}
+  const m=wbMap(SIDE[S.e.odk]);let c=m[k];
+  if(c){const L=libGet(c);if(L){$('mcs').value=L.id;fillFromLib(L);$('wbMsg').textContent=`Card #${k} → ${L.id}: ${flipOn?flipCall(L.call)+' (flipped)':L.call}`;return}if(flipOn)c=flipCall(c);if(S.e.odk==='K'){$('wbMsg').textContent=c;return}
     onCall(null,c,true);$('call').value=CATS.map(x=>$('f-'+x.k)?.value).filter(Boolean).join(' ');$('wbMsg').textContent=(S.e.odk==='O'?'Offense':'Defense')+' card #'+k}else $('wbMsg').textContent=k?'Not on the '+UN[S.e.odk].toLowerCase()+' card':''});
 $('fields').addEventListener('change',()=>{readForm();renderRead()});
 $('save').addEventListener('click',savePlay);
@@ -761,7 +766,7 @@ $('undo').addEventListener('click',()=>{if(S.edit){S.edit=null;S.e=blankEntry();
 $('clear').addEventListener('click',()=>{S.e.f={};S.e.res='';S.edit=null;clearInputs();render()});
 $('logT').addEventListener('click',ev=>{const tr=ev.target.closest('tr[data-n]');if(tr)loadForEdit(+tr.dataset.n)});
 $('us').addEventListener('change',()=>{S.us=$('us').value||'US';render()});$('opp').addEventListener('change',()=>{S.opp=$('opp').value||'OPP';render()});
-$('v-setup').addEventListener('change',ev=>{const t=ev.target;if(t.dataset.w){S.wb=S.wb||{};S.wb[t.dataset.w]=t.value}if(t.dataset.k){S.vocab[t.dataset.k]=t.value}if(t.dataset.r){S.rules[t.dataset.r]=['zones','field','hashes'].includes(t.dataset.r)?t.value:+t.value||0}save();buildVocab()});
+$('v-setup').addEventListener('change',ev=>{const t=ev.target;if(t.dataset.w){S.wb=S.wb||{};S.wb[t.dataset.w]=t.value}if(t.dataset.k){S.vocab[t.dataset.k]=t.value}if(t.dataset.r){S.rules[t.dataset.r]=['zones','field','hashes','flip'].includes(t.dataset.r)?t.value:+t.value||0}save();buildVocab()});
 $('blank').addEventListener('click',ev=>{if(ev.target.dataset.sure){S.plays=[];S.e=blankEntry();S.edit=null;S.sample=false;delete ev.target.dataset.sure;ev.target.textContent='Start blank game';show('chart')}else{ev.target.dataset.sure=1;ev.target.textContent='Tap again to erase all plays'}});
 $('wipeVocab').addEventListener('click',ev=>{if(ev.target.dataset.sure){for(const c of CATS)S.vocab[c.k]='';S.wb={o:'',d:'',k:''};delete ev.target.dataset.sure;ev.target.textContent='Clear terminology';render()}else{ev.target.dataset.sure=1;ev.target.textContent='Tap again to clear all terms'}});
 $('loadSample').addEventListener('click',()=>{S.scripts=SAMPLE_SCRIPTS.map(s=>({...s,rows:s.rows.map(r=>({...r}))}));S.cs=SAMPLE_CS.map(b=>({...b,plays:[...b.plays]}));S.vocab={...SAMPLE_VOCAB};S.wb={...SAMPLE_WB};S.lib=[...SAMPLE_LIB,...SAMPLE_LOOKS].map(x=>({...x,draw:(S.lib||[]).find(y=>y.u===x.u&&y.id===x.id&&y.draw)?.draw||x.draw}));S.rules={...DEF_RULES};sampleGame();show('chart')});
