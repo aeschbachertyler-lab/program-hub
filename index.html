@@ -124,7 +124,8 @@ table.pr td{padding:4px 3px;vertical-align:middle}
       <div class="f" id="fields"></div>
       <label>Result</label><div class="seg" id="res" style="margin:4px 0 12px"></div>
       <div class="f">
-        <div><label for="gain">Gain / loss</label><input id="gain" type="number" inputmode="numeric"></div>
+        <div class="odf"><label for="spot">Ball spotted at</label><input id="spot" type="number" inputmode="numeric" placeholder="optional"></div>
+        <div><label for="gain">Gain / loss</label><input id="gain" type="number" inputmode="numeric" placeholder="auto"></div>
         <div><label for="ball">Ball carrier / target #</label><input id="ball" inputmode="numeric"></div>
         <div><label for="qb">Passer #</label><input id="qb" inputmode="numeric"></div>
         <div><label for="tk">Tackler(s) #</label><input id="tk" placeholder="44, 12"></div>
@@ -307,7 +308,7 @@ function score(ps){let u=0,t=0;for(const p of ps){const r=p.res;
   return[u,t]}
 
 /* ---------- aggregation ---------- */
-function agg(list){const l=list.filter(p=>!p.pen);const n=l.length,yds=l.reduce((s,p)=>s+(+p.gain||0),0);
+function agg(list){const l=list.filter(p=>!p.pen&&!(p.gain===''&&p.odk!=='K'));const n=l.length,yds=l.reduce((s,p)=>s+(+p.gain||0),0);
   const run=l.filter(p=>p.rp==='R').length,att=l.filter(p=>p.rp==='P'&&!['Sack','Scramble'].includes(p.res)).length;
   const cmp=l.filter(p=>/^Complete/.test(p.res)).length;
   return{n,yds,avg:n?yds/n:NaN,run,pass:n-run,ok:l.filter(p=>p.ok).length,ex:l.filter(p=>p.ex).length,to:l.filter(p=>TO.includes(p.res)).length,att,cmp}}
@@ -363,7 +364,7 @@ function vPly(ps){const o=indiv(ps.filter(p=>p.odk==='O')),th=indiv(ps.filter(p=
   $('v-ply').innerHTML=`<h2>Players</h2><div class="two"><div><h3 style="font-size:24px">${esc(S.us)}</h3>${pTable('Rushing',o.ru,['Att','Yds','TD','Fum'])}${pTable('Passing',o.pa,['Comp/att','Yds','INT'])}${pTable('Receiving',o.re,['Rec','Yds','TD'])}${pTable('Tackles & INTs',tk,['Tkl','Sack','TFL','INT','INT yds'])}</div>
   <div><h3 style="font-size:24px">${esc(S.opp)}</h3>${pTable('Rushing',th.ru,['Att','Yds','TD','Fum'])}${pTable('Passing',th.pa,['Comp/att','Yds','INT'])}${pTable('Receiving',th.re,['Rec','Yds','TD'])}</div></div>`}
 const callTxt=p=>p.odk==='K'?((S.lib||[]).find(e=>e.u==='K'&&e.id===p.mcs)?.call||''):CATS.map(c=>p.f[c.k]).filter(Boolean).join(' ');
-function vLog(ps){$('logT').innerHTML=`<thead><tr><th>#</th><th>Unit</th><th>Q</th><th>Ser</th><th>D&amp;D</th><th>Yard ln</th><th>Hash</th><th>WB</th><th>Play #</th><th>Type</th><th>Call</th><th>Result</th><th class="n">Gain</th><th>Eff</th></tr></thead><tbody>${[...ps].reverse().map(p=>`<tr data-n="${p.n}"><td>${p.n}</td><td><span class="tag ${p.odk}">${p.odk}</span></td><td>${p.qtr}</td><td>${p.ser}</td><td>${p.odk==='K'?'':esc(p.down+'&'+p.dist)}</td><td>${esc(p.yl)}</td><td>${esc(p.hash)}</td><td>${esc(p.wb||'')}</td><td>${esc(p.mcs||'')}</td><td>${esc(p.type)}</td><td>${esc(callTxt(p))}</td><td>${esc(p.res)}</td><td class="n">${p.odk==='K'?esc(p.ky||''):esc(p.gain)}</td><td>${p.ok==null?'':p.ok?'Y':'N'}</td></tr>`).join('')}</tbody>`}
+function vLog(ps){$('logT').innerHTML=`<thead><tr><th>#</th><th>Unit</th><th>Q</th><th>Ser</th><th>D&amp;D</th><th>Yard ln</th><th>Hash</th><th>WB</th><th>Play #</th><th>Type</th><th>Call</th><th>Result</th><th class="n">Gain</th><th>Eff</th></tr></thead><tbody>${[...ps].reverse().map(p=>`<tr data-n="${p.n}"><td>${p.n}</td><td><span class="tag ${p.odk}">${p.odk}</span></td><td>${p.qtr}</td><td>${p.ser}</td><td>${p.odk==='K'?'':esc(p.down+'&'+p.dist)}</td><td>${esc(p.yl)}</td><td>${esc(p.hash)}</td><td>${esc(p.wb||'')}</td><td>${esc(p.mcs||'')}</td><td>${esc(p.type)}</td><td>${esc(callTxt(p))}</td><td>${esc(p.res)}</td><td class="n">${p.odk==='K'?esc(p.ky||''):p.gain===''?'<span class="note">next spot</span>':esc(p.gain)}</td><td>${p.ok==null?'':p.ok?'Y':'N'}</td></tr>`).join('')}</tbody>`}
 
 /* ---------- live read ---------- */
 function vRead(ps){const e=S.e;const r=$('read');
@@ -388,7 +389,7 @@ function renderEntry(){const e=S.e;
   const types=e.odk==='K'?KT:['Run','Pass'];if(!types.includes(e.type))e.type=types[0];
   $('type').innerHTML=types.map(t=>`<option ${t===e.type?'selected':''}>${t}</option>`).join('');
   seg('res',resFor(e.type),'res');$('dist').value=e.dist;$('yl').value=e.yl;
-  for(const el of document.querySelectorAll('.kf'))el.classList.toggle('hide',e.odk!=='K');for(const el of document.querySelectorAll('.intf'))el.classList.toggle('hide',!/^INT/.test(e.res));
+  for(const el of document.querySelectorAll('.kf'))el.classList.toggle('hide',e.odk!=='K');for(const el of document.querySelectorAll('.odf'))el.classList.toggle('hide',e.odk==='K');for(const el of document.querySelectorAll('.intf'))el.classList.toggle('hide',!/^INT/.test(e.res));
   $('down').parentElement.classList.toggle('hide',e.odk==='K');$('dist').parentElement.classList.toggle('hide',e.odk==='K');
   $('call').classList.toggle('hide',e.odk==='K');$('call').previousElementSibling.classList.toggle('hide',e.odk==='K');
   fieldsHtml();$('eTitle').textContent=S.edit?`Editing play ${S.edit}`:`Play ${nextN()}`;$('save').textContent=S.edit?'Update play ⏎':'Save play ⏎';
@@ -404,6 +405,7 @@ function savePlay(){readForm();const e=S.e;if(!e.res){flash('res');return}
   const ser=old?old.ser:(e.odk==='K'?(ps.length?ps[ps.length-1].ser:1):curSer(ps));
   const p={n,odk:e.odk,qtr:e.qtr,ser,hash:e.hash,down:e.odk==='K'?'':e.down,dist:e.odk==='K'?'':e.dist,yl:e.yl,type:e.type,res:e.res,f:{...e.f},
     gain:$('gain').value,wb:$('wb').value.trim(),mcs:$('mcs').value.trim(),ib:$('ib').value.trim(),iy:$('iy').value,ball:$('ball').value.trim(),qb:$('qb').value.trim(),tk:$('tk').value.trim(),kk:$('kk').value.trim(),ky:$('ky').value,rt:$('rt').value.trim(),ry:$('ry').value,notes:$('notes').value.trim()};
+  if(e.odk!=='K'){const sp=$('spot').value,y0=ytg(p.yl);if(sp!==''&&y0!=null&&ytg(sp)!=null)p.gain=String(y0-ytg(sp));else if(p.gain===''&&['Incomplete','INT','INT TD'].includes(p.res))p.gain='0';else if(p.gain===''&&/TD/.test(p.res)&&y0!=null)p.gain=String(y0)}
   const g=+p.gain||0,tdEnd=/TD|Safety/.test(p.res)||TO.includes(p.res);
   p.end=e.odk!=='K'&&($('send').checked||tdEnd||(+p.down===4&&g<+p.dist));
   if(old){Object.assign(old,p);S.edit=null;S.e=nextFrom(old,true)}else{S.plays.push(p);S.e=nextFrom(p)}
@@ -416,10 +418,11 @@ function nextFrom(p,keep){const e=blankEntry();e.qtr=p.qtr;e.hash='M';if(keep)re
   const g=+p.gain||0,y=ytg(p.yl);
   if(/TD/.test(p.res)&&!TO.includes(p.res)){e.odk='K';e.type=p.odk==='O'?'PAT':'PAT Block';return e}
   if(p.end){e.odk=p.odk==='O'?'D':'O';if(y!=null&&!TO.includes(p.res)&&+p.down===4){e.yl=fromYtg(100-(y-g))}return e}
-  e.odk=p.odk;const ny=y==null?null:y-g;if(ny!=null)e.yl=fromYtg(ny);
+  e.odk=p.odk;e.hash=p.hash;if(p.gain===''){e.yl='';e.down=p.down;e.dist=p.dist;e.pendFrom=p.n;return e}
+  const ny=y==null?null:y-g;if(ny!=null)e.yl=fromYtg(ny);
   if(g>=+p.dist){e.down=1;e.dist=ny!=null&&ny<10?ny:10}else{e.down=Math.min(4,+p.down+1);e.dist=Math.max(1,+p.dist-g)}
   e.hash=p.hash;return e}
-function clearInputs(){for(const id of['wb','mcs','ib','iy','call','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(id).value='';$('send').checked=false;$('chips').innerHTML='';$('wbMsg').textContent=''}
+function clearInputs(){for(const id of['spot','wb','mcs','ib','iy','call','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(id).value='';$('send').checked=false;$('chips').innerHTML='';$('wbMsg').textContent=''}
 function flash(id){const el=$(id);el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
 function loadForEdit(n){const p=S.plays.find(x=>x.n===n);if(!p)return;S.edit=n;
   S.e={odk:p.odk,qtr:p.qtr,hash:p.hash,down:p.down||1,dist:p.dist||10,yl:p.yl,type:p.type,res:p.res,f:{...p.f}};
@@ -707,7 +710,7 @@ function show(t){tab=t;const sc=secOf(t)||SECS[0];lastTab[sc[0]]=t;$('secs').inn
 function renderRead(){vRead(derive())}
 function render(){buildVocab();const ps=derive();const[u,t]=score(ps);
   $('us').value=S.us;$('opp').value=S.opp;$('sUs').textContent=u;$('sThem').textContent=t;
-  const e=S.e;$('sit').textContent=e.odk==='K'?`Q${e.qtr} · ${e.type}`:`Q${e.qtr} · ${({O:S.us,D:S.opp})[e.odk]} ball · ${e.down}&${e.dist}${e.yl!==''?' at '+(+e.yl>0?'+':'')+e.yl:''} · ${e.hash} hash`;
+  const e=S.e;$('sit').textContent=e.odk==='K'?`Q${e.qtr} · ${e.type}`:`Q${e.qtr} · ${({O:S.us,D:S.opp})[e.odk]} ball · ${e.pendFrom?'enter the yard line':e.down+'&'+e.dist}${e.yl!==''?' at '+(+e.yl>0?'+':'')+e.yl:''} · ${e.hash} hash`;
   if(tab==='chart'){renderEntry();vRead(ps);
     $('last').innerHTML=`<thead><tr><th>#</th><th>D&amp;D</th><th>Call</th><th>Result</th><th class="n">Gain</th></tr></thead><tbody>${ps.slice(-6).reverse().map(p=>`<tr><td><span class="tag ${p.odk}">${p.odk}</span> ${p.n}</td><td>${p.odk==='K'?esc(p.type):esc(p.down+'&'+p.dist)}</td><td>${esc(callTxt(p))}</td><td>${esc(p.res)}</td><td class="n">${esc(p.odk==='K'?p.ky:p.gain)}</td></tr>`).join('')}</tbody>`}
   if(tab==='log')vLog(ps);if(tab==='off')vOff(ps);if(tab==='def')vDef(ps);if(tab==='st')vSt(ps);if(tab==='ply')vPly(ps);if(tab==='lib')vLib(ps);if(tab==='cs')vCs(ps);if(tab==='pr'){$('v-cards').innerHTML='';vPr()}if(tab==='cards'){$('v-pr').innerHTML='';vCards()}if(tab==='setup')renderSetup();
@@ -733,9 +736,16 @@ for(const id of['libQ','libSec','libSort'])$(id).addEventListener('input',()=>re
 $('secs').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const s=SECS.find(x=>x[0]===b.dataset.s);show(lastTab[s[0]]||s[2][0][0])});
 $('tabs').addEventListener('click',ev=>{const b=ev.target.closest('button');if(b){if(b.dataset.t==='lib'){libOpen=null;ed=null}show(b.dataset.t)}});
 for(const[id,key]of[['odk','odk'],['qtr','qtr'],['hash','hash'],['down','down'],['res','res']])
-  $(id).addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;readForm();let v=b.dataset.v;if(['qtr','down'].includes(key)&&v!=='OT')v=+v;S.e[key]=v;if(key==='odk'){S.e.res='';S.e.f={};$('chips').innerHTML='';$('call').value=''}if(key==='res'&&/^INT/.test(v)&&S.e.type==='Run')S.e.type='Pass';if(key==='res'&&/TD/.test(v)&&!/INT|Fumble/.test(v)&&S.e.yl!==''&&$('gain').value===''){const y=ytg(S.e.yl);if(y)$('gain').value=y}render()});
+  $(id).addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;readForm();let v=b.dataset.v;if(['qtr','down'].includes(key)&&v!=='OT')v=+v;S.e[key]=v;if(key==='odk'){delete S.e.pendFrom;S.e.res='';S.e.f={};$('chips').innerHTML='';$('call').value=''}if(key==='res'&&/^INT/.test(v)&&S.e.type==='Run')S.e.type='Pass';if(key==='res'&&/TD/.test(v)&&!/INT|Fumble/.test(v)&&S.e.yl!==''&&$('gain').value===''){const y=ytg(S.e.yl);if(y)$('gain').value=y}render()});
 $('type').addEventListener('change',()=>{readForm();S.e.type=$('type').value;S.e.res='';render()});
-for(const id of['dist','yl'])$(id).addEventListener('change',()=>{readForm();render()});
+$('dist').addEventListener('change',()=>{readForm();render()});
+$('yl').addEventListener('change',()=>{readForm();const e=S.e;const ny=ytg(e.yl);
+  if(e.odk!=='K'&&ny!=null){const prev=e.pendFrom?S.plays.find(p=>p.n===e.pendFrom):null;
+    if(prev&&prev.gain===''&&ytg(prev.yl)!=null){const g=ytg(prev.yl)-ny;prev.gain=String(g);
+      if(g>=+prev.dist){e.down=1;e.dist=ny<10?ny:10}else{e.down=Math.min(4,+prev.down+1);e.dist=Math.max(1,+prev.dist-g)}
+      delete e.pendFrom;render();$('wbMsg').textContent=`Play ${prev.n} gain set to ${g>0?'+':''}${g} → now ${e.down}&${e.dist}`;return}}
+  render()});
+$('spot').addEventListener('input',()=>{const y0=ytg($('yl').value),y1=ytg($('spot').value);$('gain').value=y0!=null&&y1!=null?y0-y1:''});
 $('call').addEventListener('input',ev=>{onCall(ev);const L=libByCall($('call').value);$('mcs').value=L?L.id:'';$('wbMsg').textContent=L?'Matches library play '+L.id:''});
 $('mcs').addEventListener('input',()=>{const L=libGet($('mcs').value);if(L){fillFromLib(L);if(S.e.odk!=='K')$('wbMsg').textContent='Library call '+L.id}else $('wbMsg').textContent=$('mcs').value?'Not in the library':''});
 function fillFromLib(L){if(S.e.odk==='K'){if(KT.includes(L.sec)&&S.e.type!==L.sec){S.e.type=L.sec;S.e.res='';const m=$('mcs').value,w=$('wb').value;render();$('mcs').value=m;$('wb').value=w}$('wbMsg').textContent=L.id+': '+L.call;return}$('call').value=L.call;onCall(null,L.call,S.e.odk==='D')}
