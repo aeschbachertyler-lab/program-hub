@@ -139,7 +139,7 @@ button.dl{all:unset;cursor:pointer;font-weight:700;color:var(--ink);border-botto
         <div class="kf"><label for="ry">Return yds</label><input id="ry" type="number"></div>
       </div>
       <div class="row">
-        <div style="flex:1 1 220px"><label for="notes">Notes</label><input id="notes"></div>
+        <div style="width:150px"><label for="ma">MA (#s)</label><input id="ma" placeholder="#s"></div><div style="flex:1 1 220px"><label for="notes">Notes</label><input id="notes"></div>
         <label style="display:flex;gap:6px;align-items:center;min-height:44px;color:var(--ink)"><input type="checkbox" id="send" style="width:22px;min-height:22px"> End series</label>
       </div>
       <div class="row"><button class="pri" id="save">Save play ⏎</button><button id="undo">Undo last</button><button id="clear">Clear</button></div>
@@ -164,6 +164,8 @@ button.dl{all:unset;cursor:pointer;font-weight:700;color:var(--ink);border-botto
 <section id="v-cs" class="hide"></section>
 <section id="v-pr" class="hide"></section>
 <section id="v-cards" class="hide"></section>
+<section id="v-pg" class="hide"></section>
+<section id="v-gg" class="hide"></section>
 <section id="v-lib" class="hide">
   <div id="libList">
     <div class="row" style="justify-content:space-between"><div class="row" style="margin:0"><h2 style="margin:0 8px 0 0">Library</h2><span id="libUnit"></span></div><div class="seg"><button class="pri" id="libNew">New call</button><button id="libImpBtn">Import list</button></div></div>
@@ -378,7 +380,7 @@ function indiv(list){const ru=new Map(),pa=new Map(),re=new Map();const add=(m,k
 function vPly(ps){const o=indiv(ps.filter(p=>p.odk==='O')),th=indiv(ps.filter(p=>p.odk==='D'));
   const tk=new Map();for(const p of ps.filter(p=>p.odk==='D'||p.odk==='K')){const isI=p.res.startsWith('INT');if(isI&&(p.ib||p.tk)){const n=String(p.ib||p.tk).split(/[ ,]+/)[0];if(!tk.has(n))tk.set(n,[0,0,0,0,0]);tk.get(n)[3]++;tk.get(n)[4]+=+p.iy||0}
    for(const n of String(p.tk||'').split(/[ ,]+/).filter(Boolean)){if(isI&&!p.ib)break;if(!tk.has(n))tk.set(n,[0,0,0,0,0]);const a=tk.get(n);a[0]++;if(p.res==='Sack')a[1]++;if(p.rp==='R'&&(+p.gain||0)<0)a[2]++}}
-  $('v-ply').innerHTML=`<h2>Players</h2><div class="two"><div><h3 style="font-size:24px">${esc(S.us)}</h3>${pTable('Rushing',o.ru,['Att','Yds','TD','Fum'])}${pTable('Passing',o.pa,['Comp/att','Yds','INT'])}${pTable('Receiving',o.re,['Rec','Yds','TD'])}${pTable('Tackles & INTs',tk,['Tkl','Sack','TFL','INT','INT yds'])}</div>
+  $('v-ply').innerHTML=`<h2>Players</h2><div class="two"><div><h3 style="font-size:24px">${esc(S.us)}</h3>${pTable('Rushing',o.ru,['Att','Yds','TD','Fum'])}${pTable('Passing',o.pa,['Comp/att','Yds','INT'])}${pTable('Receiving',o.re,['Rec','Yds','TD'])}${pTable('Tackles & INTs',tk,['Tkl','Sack','TFL','INT','INT yds'])}${maTable('Missed assignments (all units, game + practice)',maMap('',ps))}</div>
   <div><h3 style="font-size:24px">${esc(S.opp)}</h3>${pTable('Rushing',th.ru,['Att','Yds','TD','Fum'])}${pTable('Passing',th.pa,['Comp/att','Yds','INT'])}${pTable('Receiving',th.re,['Rec','Yds','TD'])}</div></div>`}
 const callTxt=p=>p.odk==='K'?((c=>p.flip?flipCall(c):c)((S.lib||[]).find(e=>e.u==='K'&&e.id===p.mcs)?.call||'')):(p.raw||CATS.map(c=>p.f[c.k]).filter(Boolean).join(' '));
 function vLog(ps){$('logT').innerHTML=`<thead><tr><th>#</th><th>Unit</th><th>Q</th><th>Ser</th><th>D&amp;D</th><th>Yard ln</th><th>Hash</th><th>WB</th><th>Play #</th><th>Type</th><th>Call</th><th>Result</th><th class="n">Gain</th><th>Eff</th></tr></thead><tbody>${[...ps].reverse().map(p=>`<tr data-n="${p.n}"><td>${p.n}</td><td><span class="tag ${p.odk}">${p.odk}</span></td><td>${p.qtr}</td><td>${p.ser}</td><td>${p.odk==='K'?'':esc(p.down+'&'+p.dist)}</td><td>${esc(p.yl)}</td><td>${esc(p.hash)}</td><td>${p.flip?'F':''}${esc(p.wb||'')}</td><td>${esc(p.mcs||'')}</td><td>${esc(p.type)}</td><td>${esc(callTxt(p))}</td><td>${esc(p.res)}</td><td class="n">${p.odk==='K'?esc(p.ky||''):p.gain===''?'<span class="note">next spot</span>':esc(p.gain)}</td><td>${p.ok==null?'':p.ok?'Y':'N'}</td></tr>`).join('')}</tbody>`}
@@ -421,7 +423,7 @@ function savePlay(){readForm();const e=S.e;if(!e.res){flash('res');return}
   const ps=derive();const n=S.edit||nextN();const old=S.edit?S.plays.find(p=>p.n===n):null;
   const ser=old?old.ser:(e.odk==='K'?(ps.length?ps[ps.length-1].ser:1):curSer(ps));
   const p={n,odk:e.odk,qtr:e.qtr,ser,hash:e.hash,down:e.odk==='K'?'':e.down,dist:e.odk==='K'?'':e.dist,yl:e.yl,type:e.type,res:e.res,f:{...e.f},
-    gain:$('gain').value,wb:$('wb').value.trim().toUpperCase().replace(/^(?:FLIP|F)\s*/,''),flip:flipOn,raw:$('call').value.trim().toUpperCase(),mcs:$('mcs').value.trim(),ib:$('ib').value.trim(),iy:$('iy').value,ball:$('ball').value.trim(),qb:$('qb').value.trim(),tk:$('tk').value.trim(),kk:$('kk').value.trim(),ky:$('ky').value,rt:$('rt').value.trim(),ry:$('ry').value,notes:$('notes').value.trim()};
+    gain:$('gain').value,wb:$('wb').value.trim().toUpperCase().replace(/^(?:FLIP|F)\s*/,''),flip:flipOn,ma:$('ma').value.trim().toUpperCase(),raw:$('call').value.trim().toUpperCase(),mcs:$('mcs').value.trim(),ib:$('ib').value.trim(),iy:$('iy').value,ball:$('ball').value.trim(),qb:$('qb').value.trim(),tk:$('tk').value.trim(),kk:$('kk').value.trim(),ky:$('ky').value,rt:$('rt').value.trim(),ry:$('ry').value,notes:$('notes').value.trim()};
   if(e.odk!=='K'){const sp=$('spot').value,y0=ytg(p.yl);if(sp!==''&&y0!=null&&ytg(sp)!=null)p.gain=String(y0-ytg(sp));else if(p.gain===''&&['Incomplete','INT','INT TD'].includes(p.res))p.gain='0';else if(p.gain===''&&/TD/.test(p.res)&&y0!=null)p.gain=String(y0)}
   const g=+p.gain||0,tdEnd=/TD|Safety/.test(p.res)||TO.includes(p.res);
   p.end=e.odk!=='K'&&($('send').checked||tdEnd||(+p.down===4&&g<+p.dist));
@@ -439,11 +441,11 @@ function nextFrom(p,keep){const e=blankEntry();e.qtr=p.qtr;e.hash='M';if(keep)re
   const ny=y==null?null:y-g;if(ny!=null)e.yl=fromYtg(ny);
   if(g>=+p.dist){e.down=1;e.dist=ny!=null&&ny<10?ny:10}else{e.down=Math.min(4,+p.down+1);e.dist=Math.max(1,+p.dist-g)}
   e.hash=p.hash;return e}
-function clearInputs(){if($('flip'))setFlip(false);for(const id of['spot','wb','mcs','ib','iy','call','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(id).value='';$('send').checked=false;$('chips').innerHTML='';$('wbMsg').textContent=''}
+function clearInputs(){if($('flip'))setFlip(false);for(const id of['ma','spot','wb','mcs','ib','iy','call','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(id).value='';$('send').checked=false;$('chips').innerHTML='';$('wbMsg').textContent=''}
 function flash(id){const el=$(id);el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
 function loadForEdit(n){const p=S.plays.find(x=>x.n===n);if(!p)return;S.edit=n;
   S.e={odk:p.odk,qtr:p.qtr,hash:p.hash,down:p.down||1,dist:p.dist||10,yl:p.yl,type:p.type,res:p.res,f:{...p.f}};
-  setFlip(!!p.flip);for(const k of['wb','mcs','ib','iy','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(k).value=p[k]??'';$('call').value=callTxt(p);$('send').checked=!!p.end;show('chart');render()}
+  setFlip(!!p.flip);for(const k of['ma','wb','mcs','ib','iy','gain','ball','qb','tk','kk','ky','rt','ry','notes'])$(k).value=p[k]??'';$('call').value=callTxt(p);$('send').checked=!!p.end;show('chart');render()}
 
 /* ---------- setup ---------- */
 function renderSetup(){S.wb=S.wb||{o:'',d:''};$('wb-o').value=S.wb.o||'';$('wb-d').value=S.wb.d||'';$('wb-k').value=S.wb.k||'';$('vocab').innerHTML=CATS.map(c=>`<div><label for="v-${c.k}">${c.l}${c.fam?' = family':''}${c.k==='play'?' (R/P, family)':''}</label><textarea id="v-${c.k}" data-k="${c.k}">${esc(S.vocab[c.k]||'')}</textarea></div>`).join('');
@@ -451,7 +453,7 @@ function renderSetup(){S.wb=S.wb||{o:'',d:''};$('wb-o').value=S.wb.o||'';$('wb-d
   $('rules').innerHTML=`<div style="grid-column:1/-1"><label for="r-flip">Flip pairs — one per line; Flip swaps each pair both ways (add run numbers or tags like 31 = 30, ZORRO = ZULU)</label><textarea id="r-flip" data-r="flip" style="min-height:90px">${esc(S.rules.flip??DEF_RULES.flip)}</textarea></div><div><label for="r-field">Field style</label><select id="r-field" data-r="field"><option value="turf" ${(S.rules.field||'turf')==='turf'?'selected':''}>Turf (green)</option><option value="white" ${S.rules.field==='white'?'selected':''}>Whiteboard</option></select></div><div><label for="r-hashes">Hash marks</label><select id="r-hashes" data-r="hashes">${[['college','College'],['hs','High school'],['nfl','NFL']].map(([k,l])=>`<option value="${k}" ${(S.rules.hashes||'college')===k?'selected':''}>${l}</option>`).join('')}</select></div>`+R.map(([k,l])=>`<div><label for="r-${k}">${l}</label><input id="r-${k}" data-r="${k}" type="number" value="${esc(S.rules[k])}"></div>`).join('')+`<div style="grid-column:1/-1"><label for="r-zones">Field zones (yards to goal, 99 = own 1)</label><textarea id="r-zones" data-r="zones" style="min-height:110px">${esc(S.rules.zones)}</textarea></div>`}
 
 /* ---------- csv ---------- */
-const COLS=['n','odk','qtr','ser','hash','down','dist','yl','wb','mcs','type',...CATS.map(c=>'f.'+c.k),'res','gain','ball','qb','tk','ib','iy','kk','ky','rt','ry','end','notes'];
+const COLS=['n','odk','qtr','ser','hash','down','dist','yl','wb','mcs','type',...CATS.map(c=>'f.'+c.k),'res','gain','ball','qb','tk','ib','iy','kk','ky','rt','ry','ma','gnote','end','notes'];
 const cell=v=>{v=String(v??'');return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 function toCsv(){return[COLS.join(','),...[...S.plays].sort((a,b)=>a.n-b.n).map(p=>COLS.map(c=>cell(c.startsWith('f.')?p.f[c.slice(2)]:c==='end'?(p.end?'Y':''):p[c])).join(','))].join('\n')}
 function parseCsv(t){const rows=[];let r=[],v='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];
@@ -475,8 +477,8 @@ function sampleGame(){buildVocab();let s=7;const rnd=()=>(s=(s*16807)%2147483647
     if(L){for(const k of['pers','form','back','motion','play','prot'])delete f[k];Object.assign(f,parseCall(L.call).out)}
     if(DL){for(const k of['dpers','front','stunt','blitz','cover'])delete f[k];Object.assign(f,parseCall(DL.call).out)}
     if(f.form==='EMPTY'&&!L)f.back='GUN';if(pass&&rnd()<.5)f.prot=pick(['SLIDE','HALF','MAX']);f.dpers=pick(['BASE','NICKEL','NICKEL']);
-    const end=/TD|INT|Fumble/.test(res)||(d===4);
-    add({odk,ser,down:d,dist:x,yl:fromYtg(y),mcs:L?L.id:DL?DL.id:'',wb:L?wbOf(L.id,'O'):DL?wbOf(DL.id,'D'):'',type:pass?'Pass':'Run',res,gain:String(g),f,end:false,ball:pick(['4','22','8','11','3','85']),qb:pass?'12':'',tk:odk==='D'?pick(['44','32','5','9','52']):''});
+    const end=/TD|INT|Fumble/.test(res)||(d===4);const ma=rnd()<.09?pick(odk==='O'?['52','77','64','85','22']:['44','5','32','9','91']):'';
+    add({odk,ser,ma,down:d,dist:x,yl:fromYtg(y),mcs:L?L.id:DL?DL.id:'',wb:L?wbOf(L.id,'O'):DL?wbOf(DL.id,'D'):'',type:pass?'Pass':'Run',res,gain:String(g),f,end:false,ball:pick(['4','22','8','11','3','85']),qb:pass?'12':'',tk:odk==='D'?pick(['44','32','5','9','52']):''});
     if(end){S.plays[S.plays.length-1].end=true;ser++;return res}
     y-=g;if(g>=x){d=1;x=Math.min(10,y)}else{d++;x-=g}
     if(d===4){const fg=y<=30;add({odk:'K',ser,type:odk==='O'?(fg?'FG':'Punt'):(fg?'FG Block':'Punt Rec'),res:fg?(rnd()<.75?'Good':'No Good'):pick(['Return','Fair Catch','Downed']),yl:fromYtg(y),kk:fg?'39':'17',ky:fg?String(y+17):String(Math.round(32+rnd()*14)),rt:fg?'':'1',ry:fg?'':String(Math.round(rnd()*9))});S.plays[S.plays.length-2].end=true;ser++;return'kick'}}
@@ -544,7 +546,7 @@ function vLibDet(ps){$('libList').classList.add('hide');const D=$('libDet');D.cl
    <h3>Responsibilities</h3><p class="note">Tap a player on the drawing to jump to their box.</p><div class="f" id="ldResp">${respKeys(e).map(k=>`<div><label for="rs-${k}">${k}</label><input id="rs-${k}" data-rs="${k}" value="${esc(e.draw?.resp?.[k]||'')}" placeholder="${['O','XO'].includes(e.u)?(OLK.includes(k)?'Block':'Route / job'):e.u[0]==='X'||e.u==='D'?'Gap / zone / man':'Lane / job'}"></div>`).join('')}</div>
    <div class="row"><div><label for="ldImg">Or upload a photo / screenshot</label><input id="ldImg" type="file" accept="image/*"></div></div>
   </div><div>
-   <h2>${libOpen==='new'?'New':e.u[0]==='X'?'This look in practice':'This call in games'}</h2>${detStats(e.u,reps)}
+   <h2>${libOpen==='new'?'New':e.u[0]==='X'?'This look in practice':'This call in games'}</h2>${detStats(e.u,reps)}${libOpen!=='new'&&e.u[0]!=='X'?`<p class="note">Missed assignments on this call in games: <b>${reps.reduce((s,p)=>s+maOf(p.ma).length,0)}</b></p>`+pracStats(e):''}
    ${libOpen!=='new'&&!reps.length&&e.u[0]!=='X'?`<p class="note">Not called yet. Once it's charted by call # or wristband #, every rep shows up here.</p>`:''}
   </div></div>`;
   bindDet()}
@@ -650,6 +652,7 @@ const SAMPLE_SCRIPTS=[
  {id:'s2',u:'D',name:'TUE · Team vs scout O',rows:[['1','1','L','1','10','-30'],['2','2','LM','1','10','-30'],['5','1','M','3','6','+40'],['3','3','RM','2','8','-25'],['7','2','R','3','2','+15'],['4','1','L','1','10','-25']]},
  {id:'s3',u:'K',name:'TUE · Punt return',rows:[['30','2','M','4','8','-40'],['31','2','L','4','12','-35'],['32','2','R','4','5','+45'],['10','1','M','','','-35']]}
 ].map(s=>({...s,rows:s.rows.map(([call,look,hash,down,dist,fp])=>({per:'',call,look,hash,down,dist,fp,note:''}))}));
+{const G={s1:[['W','6',''],['L','2','77'],['W','12',''],['W','5',''],['L','0','52'],['W','18','']],s2:[['W','2',''],['L','9','44'],['W','-1',''],['W','3',''],['L','6','5, 32'],['W','1','']]};for(const s of SAMPLE_SCRIPTS)(G[s.id]||[]).forEach(([gr,gain,ma],i)=>Object.assign(s.rows[i],{gr,gain,ma}))}
 let prU='O',prId=null,cardIx=null,showOurs=true;
 const myScripts=()=>S.scripts.filter(s=>s.u===prU);
 function curScript(){let s=S.scripts.find(x=>x.id===prId&&x.u===prU);if(!s){s=myScripts()[0]||null;prId=s?s.id:null}return s}
@@ -663,8 +666,8 @@ function cardSvg(our,look,m,r={}){const dx=hashDx(r.hash);const ours=our?layer(o
    ${fieldBg({fp:r.fp,dist:r.dist})}${th.st}${ours.st}
    ${['K','XK'].includes(u)?'':OL.map(x=>`<rect x="${x-11+dx}" y="199" width="22" height="22" rx="3" fill="${off}" stroke="#fff" stroke-width="1.5"/>`).join('')}${th.tk}${ours.tk}</svg>`}
 function prHead(mode){const sc=curScript();
-  return`<div class="row" style="justify-content:space-between"><div class="row" style="margin:0"><h2 style="margin:0 8px 0 0">${mode==='cards'?'Scout cards':'Practice scripts'}</h2>${useg('prUseg',prU)}</div>
-   <div class="row" style="margin:0"><select id="prSel" aria-label="Script" style="width:auto;min-width:200px">${myScripts().map(s=>`<option value="${esc(s.id)}" ${sc&&s.id===sc.id?'selected':''}>${esc(s.name)}</option>`).join('')||'<option>No scripts yet</option>'}</select>${mode==='cards'?'':'<button id="prNew" class="pri">New script</button>'}</div></div>`}
+  return`<div class="row" style="justify-content:space-between"><div class="row" style="margin:0"><h2 style="margin:0 8px 0 0">${mode==='cards'?'Scout cards':mode==='grade'?'Practice grading':'Practice scripts'}</h2>${useg('prUseg',prU)}</div>
+   <div class="row" style="margin:0"><select id="prSel" aria-label="Script" style="width:auto;min-width:200px">${myScripts().map(s=>`<option value="${esc(s.id)}" ${sc&&s.id===sc.id?'selected':''}>${esc(s.name)}</option>`).join('')||'<option>No scripts yet</option>'}</select>${mode!=='edit'?'':'<button id="prNew" class="pri">New script</button>'}</div></div>`}
 function rowView(r,u){return{our:libGet(r.call,u),look:libGet(r.look,LOOKU[u])}}
 function vPr(){const V=$('v-pr');const sc=curScript();const u=prU;const LU=LOOKU[u];
   V.innerHTML=prHead('edit')+(sc?`<div class="row"><div style="flex:1 1 260px"><label for="prName">Script name</label><input id="prName" value="${esc(sc.name)}"></div><button id="prImpBtn">Paste from Excel</button><button id="prDel">Delete script</button></div>
@@ -731,9 +734,49 @@ function showDrill(){let o=$('dov');if(o)o.remove();if(!drillOpen)return;documen
   $('dovX').onclick=()=>{drillOpen=null;showDrill()};$('dov').onclick=ev=>{if(ev.target.id==='dov'){drillOpen=null;showDrill();return}const tr=ev.target.closest('tr[data-n]');if(tr){drillOpen=null;showDrill();loadForEdit(+tr.dataset.n)}}}
 document.addEventListener('click',ev=>{const b=ev.target.closest('button.dl');if(!b)return;const d=DRILL.get(b.dataset.g);if(d){drillOpen=d;showDrill()}});
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&drillOpen){drillOpen=null;showDrill()}});
+/* ---------- grading + MA ---------- */
+const maOf=s=>String(s||'').toUpperCase().split(/[\s,;/]+/).filter(Boolean);
+const PRES={O:[['W','Win'],['L','Loss']],D:[['W','Win'],['L','Loss']],K:[['W','Win'],['L','Loss']]};
+function pracReps(id,u){const out=[];for(const s of S.scripts)if(s.u===u)s.rows.forEach((r,i)=>{if(String(r.call).toUpperCase()===String(id).toUpperCase())out.push({s,r,i})});return out}
+function maTable(title,map){const rows=[...map].sort((a,b)=>b[1].t-a[1].t);return`<h3>${esc(title)}</h3>${rows.length?`<div class="scroll"><table class="stack"><thead><tr><th>#</th><th class="n">Game MAs</th><th class="n">Practice MAs</th><th class="n">Total</th><th>On calls</th></tr></thead><tbody>${rows.map(([k,v])=>`<tr><td><b>${esc(k)}</b></td><td class="n">${v.g}</td><td class="n">${v.p}</td><td class="n"><b>${v.t}</b></td><td>${esc([...v.c].slice(0,6).join(', '))}</td></tr>`).join('')}</tbody></table></div>`:'<p class="note">No missed assignments logged.</p>'}`}
+function maMap(u,ps){const m=new Map();const add=(n,src,call)=>{if(!m.has(n))m.set(n,{g:0,p:0,t:0,c:new Set()});const v=m.get(n);v[src]++;v.t++;if(call)v.c.add(call)};
+  for(const p of ps)if(!u||p.odk===u)for(const n of maOf(p.ma))add(n,'g',p.mcs);
+  for(const s of S.scripts)if(!u||s.u===u)for(const r of s.rows)for(const n of maOf(r.ma))add(n,'p',r.call);return m}
+function pracStats(e){const reps=pracReps(e.id,e.u);const g=reps.filter(x=>x.r.gr);const w=g.filter(x=>x.r.gr==='W').length;const ma=reps.reduce((s,x)=>s+maOf(x.r.ma).length,0);
+  const gains=reps.filter(x=>x.r.gain!==''&&x.r.gain!=null).map(x=>+x.r.gain);const av=gains.length?gains.reduce((s,x)=>s+x,0)/gains.length:NaN;
+  const byLook=new Map();for(const x of reps){const k=x.r.look?`${x.r.look} · ${libGet(x.r.look,LOOKU[e.u])?.call||''}`:'(no look)';if(!byLook.has(k))byLook.set(k,[]);byLook.get(k).push(x)}
+  return`<h2 style="margin-top:22px">This call in practice</h2><div class="tiles"><div class="tile"><span>Scripted reps</span><b>${reps.length}</b></div><div class="tile"><span>Graded</span><b>${g.length}</b></div><div class="tile"><span>Win rate</span><b>${pct(w,g.length)}</b></div><div class="tile"><span>Avg gain</span><b>${r1(av)}</b></div><div class="tile"><span>MAs</span><b>${ma}</b></div></div>
+  ${reps.length?`<h3>Practice vs each scout look</h3><div class="scroll"><table class="stack"><thead><tr><th>Look</th><th class="n">Reps</th><th class="n">Win</th><th class="n">Avg gain</th><th class="n">MAs</th></tr></thead><tbody>${[...byLook].map(([k,l])=>{const gg=l.filter(x=>x.r.gr);const gs=l.filter(x=>x.r.gain!==''&&x.r.gain!=null).map(x=>+x.r.gain);return`<tr><td><b>${esc(k)}</b></td><td class="n">${l.length}</td><td class="n">${pct(gg.filter(x=>x.r.gr==='W').length,gg.length)}</td><td class="n">${gs.length?r1(gs.reduce((s,x)=>s+x,0)/gs.length):'–'}</td><td class="n">${l.reduce((s,x)=>s+maOf(x.r.ma).length,0)}</td></tr>`}).join('')}</tbody></table></div>
+  <h3>Every practice rep</h3><div class="scroll"><table class="stack"><thead><tr><th>Script</th><th class="n">Rep</th><th>Look</th><th>Grade</th><th class="n">Gain</th><th>MA</th><th>Note</th></tr></thead><tbody>${reps.map(x=>`<tr><td>${esc(x.s.name)}</td><td class="n">${x.i+1}</td><td>${esc(libGet(x.r.look,LOOKU[e.u])?.call||x.r.look||'')}</td><td>${x.r.gr==='W'?'<b>Win</b>':x.r.gr==='L'?'<b style="color:var(--red)">Loss</b>':'<span class="note">—</span>'}</td><td class="n">${esc(x.r.gain??'')}</td><td>${esc(x.r.ma||'')}</td><td>${esc(x.r.gnote||'')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="note">Not in any practice script yet.</p>'}`}
+let ggU='O';
+function vGg(ps){const u=ggU;const l=ps.filter(p=>p.odk===u);const ma=l.reduce((s,p)=>s+maOf(p.ma).length,0);const withMa=l.filter(p=>maOf(p.ma).length).length;
+  $('v-gg').innerHTML=`<div class="row" style="justify-content:space-between"><div class="row" style="margin:0"><h2 style="margin:0 8px 0 0">Game grading</h2>${useg('ggUseg',u)}</div></div>
+  <p class="note">Grade off film after the game: log missed assignments (jersey #s or positions) and notes on each snap. MAs roll up by player, by call and into the Library.</p>
+  <div class="tiles"><div class="tile"><span>Snaps</span><b>${l.length}</b></div><div class="tile"><span>MAs</span><b>${ma}</b></div><div class="tile"><span>Snaps with an MA</span><b>${withMa} (${pct(withMa,l.length)})</b></div><div class="tile"><span>Graded snaps</span><b>${l.filter(p=>p.ma!=null&&p.ma!==''||p.gnote).length}</b></div></div>
+  <div class="scroll"><table class="pr gtab"><thead><tr><th>#</th><th>Q</th><th>D&amp;D</th><th>Call</th><th>Result</th><th class="n">Gain</th><th>MA (#s)</th><th>Grade note</th></tr></thead><tbody>${l.map(p=>`<tr><td>${p.n}</td><td>${p.qtr}</td><td>${p.odk==='K'?esc(p.type):esc(p.down+'&'+p.dist)}</td><td style="min-width:180px">${esc((p.mcs?p.mcs+' · ':'')+sideCall(p))}</td><td>${esc(p.res)}</td><td class="n">${esc(p.odk==='K'?p.ky??'':p.gain)}</td><td><input data-gn="${p.n}" data-k="ma" value="${esc(p.ma||'')}" placeholder="#s" style="width:110px;min-height:38px"></td><td><input data-gn="${p.n}" data-k="gnote" value="${esc(p.gnote||'')}" style="min-width:180px;min-height:38px"></td></tr>`).join('')||'<tr><td colspan="8" class="note">No snaps charted for this unit.</td></tr>'}</tbody></table></div>
+  <div class="two"><div>${maTable('MAs by player — '+UN[u].toLowerCase()+' (game + practice)',maMap(u,ps))}</div><div>${maByCall(u,ps)}</div></div>`;
+  for(const b of document.querySelectorAll('#ggUseg button'))b.onclick=()=>{ggU=b.dataset.u;render()};
+  document.querySelector('#v-gg .gtab').onchange=ev=>{const t=ev.target;if(!t.dataset.gn)return;const p=S.plays.find(x=>x.n===+t.dataset.gn);if(p){p[t.dataset.k]=t.value.trim().toUpperCase();save();if(t.dataset.k==='ma')render()}}}
+function sideCall(p){if(p.odk==='K')return callTxt(p);const off=p.odk==='O'&&p.raw?p.raw:['pers','form','back','motion','play','prot'].map(k=>p.f[k]).filter(Boolean).join(' ');const def=['dpers','front','stunt','blitz','cover'].map(k=>p.f[k]).filter(Boolean).join(' ');return p.odk==='O'?off:def+(off?' vs '+off:'')}
+function maByCall(u,ps){const m=new Map();const add=(id,src,n)=>{if(!id||!n)return;if(!m.has(id))m.set(id,{g:0,p:0});m.get(id)[src]+=n};
+  for(const p of ps)if(p.odk===u)add(p.mcs,'g',maOf(p.ma).length);for(const s of S.scripts)if(s.u===u)for(const r of s.rows)add(r.call,'p',maOf(r.ma).length);
+  const rows=[...m].sort((a,b)=>(b[1].g+b[1].p)-(a[1].g+a[1].p));
+  return`<h3>MAs by call</h3>${rows.length?`<div class="scroll"><table class="stack"><thead><tr><th>Call</th><th class="n">Game</th><th class="n">Practice</th><th class="n">Total</th></tr></thead><tbody>${rows.map(([k,v])=>`<tr><td><b>${esc(k)}</b> <span class="note">${esc(libGet(k,u)?.call||'')}</span></td><td class="n">${v.g}</td><td class="n">${v.p}</td><td class="n"><b>${v.g+v.p}</b></td></tr>`).join('')}</tbody></table></div>`:'<p class="note">No missed assignments logged.</p>'}`}
+function vPg(){const V=$('v-pg');const sc=curScript();const u=prU;
+  if(!sc){V.innerHTML=prHead('grade')+'<p class="note">No scripts for this unit yet. Build one under Practice → Scripts.</p>';bindPr();return}
+  const g=sc.rows.filter(r=>r.gr),w=g.filter(r=>r.gr==='W').length,ma=sc.rows.reduce((s,r)=>s+maOf(r.ma).length,0);
+  V.innerHTML=prHead('grade')+`<p class="note">Grade each scripted rep: win or loss, the gain, any missed assignments and a note. It feeds the Library's "This call in practice" and the MA counter.</p>
+  <div class="tiles"><div class="tile"><span>Reps</span><b>${sc.rows.length}</b></div><div class="tile"><span>Graded</span><b>${g.length}</b></div><div class="tile"><span>Win rate</span><b>${pct(w,g.length)}</b></div><div class="tile"><span>MAs</span><b>${ma}</b></div></div>
+  <div class="scroll"><table class="pr gtab"><thead><tr><th>Rep</th><th>Period</th><th>D&amp;D</th><th>Our call</th><th>Scout look</th><th>Grade</th><th class="n">Gain</th><th>MA (#s)</th><th>Note</th></tr></thead><tbody>${sc.rows.map((r,i)=>{const{our,look}=rowView(r,u);return`<tr><td class="n">${i+1}</td><td>${esc(r.per||'')}</td><td>${esc([r.hash,r.down&&r.down+'&'+(r.dist||'')].filter(Boolean).join(' '))}</td><td style="min-width:150px">${esc((r.call?r.call+' · ':'')+(our?.call||''))}</td><td style="min-width:130px;color:var(--red)">${esc(look?.call||r.look||'')}</td>
+   <td style="white-space:nowrap"><button class="mini ${r.gr==='W'?'on':''}" data-pg="${i}" data-v="W">W</button><button class="mini ${r.gr==='L'?'pri':''}" data-pg="${i}" data-v="L">L</button></td>
+   <td><input data-pr="${i}" data-k="gain" type="number" value="${esc(r.gain??'')}" style="width:64px;min-height:38px"></td><td><input data-pr="${i}" data-k="ma" value="${esc(r.ma||'')}" placeholder="#s" style="width:100px;min-height:38px"></td><td><input data-pr="${i}" data-k="gnote" value="${esc(r.gnote||'')}" style="min-width:160px;min-height:38px"></td></tr>`}).join('')}</tbody></table></div>
+  ${maTable('MAs by player — this script',(()=>{const m=new Map();for(const r of sc.rows)for(const n of maOf(r.ma)){if(!m.has(n))m.set(n,{g:0,p:0,t:0,c:new Set()});const v=m.get(n);v.p++;v.t++;if(r.call)v.c.add(r.call)}return m})())}`;
+  bindPr();const T=document.querySelector('#v-pg .gtab');
+  T.onclick=ev=>{const b=ev.target.closest('[data-pg]');if(!b)return;const r=sc.rows[+b.dataset.pg];r.gr=r.gr===b.dataset.v?'':b.dataset.v;render()};
+  T.onchange=ev=>{const t=ev.target;if(t.dataset.pr==null)return;const r=sc.rows[+t.dataset.pr];r[t.dataset.k]=t.dataset.k==='gain'?t.value:t.value.trim().toUpperCase();save();if(t.dataset.k!=='gnote')render()}}
 /* ---------- render + events ---------- */
 let tab='chart';
-const SECS=[['game','Game day',[['chart','Chart'],['log','Play log'],['off','Offense'],['def','Defense'],['st','Special teams'],['ply','Players']]],['prac','Practice',[['pr','Scripts'],['cards','Scout cards']]],['book','Playbook',[['cs','Call sheet'],['lib','Library']]],['set','Setup',[['setup','Terminology & cards']]]];
+const SECS=[['game','Game day',[['chart','Chart'],['log','Play log'],['off','Offense'],['def','Defense'],['st','Special teams'],['ply','Players'],['gg','Grading']]],['prac','Practice',[['pr','Scripts'],['cards','Scout cards'],['pg','Grading']]],['book','Playbook',[['cs','Call sheet'],['lib','Library']]],['set','Setup',[['setup','Terminology & cards']]]];
 const secOf=t=>SECS.find(s=>s[2].some(x=>x[0]===t));const lastTab={};
 function show(t){tab=t;const sc=secOf(t)||SECS[0];lastTab[sc[0]]=t;$('secs').innerHTML=SECS.map(s=>`<button data-s="${s[0]}" class="${s===sc?'on':''}">${s[1]}</button>`).join('');$('tabs').innerHTML=sc[2].map(([k,l])=>`<button data-t="${k}" class="${k===t?'on':''}">${l}</button>`).join('');document.querySelector('.top').classList.toggle('nogame',sc[0]!=='game');for(const s of document.querySelectorAll('main>section'))s.classList.toggle('hide',s.id!=='v-'+t);try{history.replaceState(null,'','#'+t)}catch(e){}render()}
 function renderRead(){vRead(derive())}
@@ -742,7 +785,7 @@ function render(){DRILL=new Map();drillN=0;buildVocab();const ps=derive();const[
   const e=S.e;$('sit').textContent=e.odk==='K'?`Q${e.qtr} · ${e.type}`:`Q${e.qtr} · ${({O:S.us,D:S.opp})[e.odk]} ball · ${e.pendFrom?'enter the yard line':e.down+'&'+e.dist}${e.yl!==''?' at '+(+e.yl>0?'+':'')+e.yl:''} · ${e.hash} hash`;
   if(tab==='chart'){renderEntry();vRead(ps);
     $('last').innerHTML=`<thead><tr><th>#</th><th>D&amp;D</th><th>Call</th><th>Result</th><th class="n">Gain</th></tr></thead><tbody>${ps.slice(-6).reverse().map(p=>`<tr><td><span class="tag ${p.odk}">${p.odk}</span> ${p.n}</td><td>${p.odk==='K'?esc(p.type):esc(p.down+'&'+p.dist)}</td><td>${esc(callTxt(p))}</td><td>${esc(p.res)}</td><td class="n">${esc(p.odk==='K'?p.ky:p.gain)}</td></tr>`).join('')}</tbody>`}
-  if(tab==='log')vLog(ps);if(tab==='off')vOff(ps);if(tab==='def')vDef(ps);if(tab==='st')vSt(ps);if(tab==='ply')vPly(ps);if(tab==='lib')vLib(ps);if(tab==='cs')vCs(ps);if(tab==='pr'){$('v-cards').innerHTML='';vPr()}if(tab==='cards'){$('v-pr').innerHTML='';vCards()}if(tab==='setup')renderSetup();
+  if(tab==='log')vLog(ps);if(tab==='off')vOff(ps);if(tab==='def')vDef(ps);if(tab==='st')vSt(ps);if(tab==='ply')vPly(ps);if(tab==='lib')vLib(ps);if(tab==='cs')vCs(ps);if(['pr','cards','pg'].includes(tab))for(const x of['pr','cards','pg'])if(x!==tab)$('v-'+x).innerHTML='';if(tab==='pr')vPr();if(tab==='cards')vCards();if(tab==='pg')vPg();if(tab==='gg')vGg(ps);if(tab==='setup')renderSetup();
   save()}
 
 $('v-cs').addEventListener('click',ev=>{const t=ev.target.closest('button,tr');if(!t)return;
