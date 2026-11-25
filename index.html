@@ -88,6 +88,7 @@ table.pr td{padding:4px 3px;vertical-align:middle}
 #secs{display:flex;gap:4px;padding:8px max(3vw,12px) 0;background:var(--bg);overflow-x:auto}#secs button{flex:none;border-radius:8px 8px 0 0;border-bottom:0;font-size:17px}
 #secs button.on{background:var(--red);border-color:var(--red);color:#fff}
 .rsp{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;margin-top:4px;line-height:1.3}.rl{color:var(--red)}.ro{color:var(--mute)}.sc.big .rsp{font-size:15px}
+details.ex{margin:0 0 18px}details.ex summary{cursor:pointer;list-style-position:outside}details.ex .tiles{margin-top:10px}
 .tag{display:inline-block;font-size:12px;font-weight:700;padding:1px 7px;border-radius:4px;background:var(--chip)}
 .tag.O{background:var(--ink);color:var(--bg)}.tag.D{background:var(--red);color:#fff}
 @media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;color:var(--mute)}.stack td:empty{display:none}}
@@ -327,17 +328,32 @@ function tiles(list,def){const a=agg(list);const t3=list.filter(p=>+p.down===3&&
   return`<div class="tiles">${T.map(([k,v])=>`<div class="tile"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`}
 
 /* ---------- views ---------- */
+
+function explosives(list,def){const all=list.filter(p=>!p.pen&&!(p.gain===''&&p.odk!=='K'));const ex=all.filter(p=>p.ex);
+  const run=ex.filter(p=>p.rp==='R'),pass=ex.filter(p=>p.rp==='P');const yds=ex.reduce((s,p)=>s+(+p.gain||0),0);const td=ex.filter(p=>/TD/.test(p.res)&&!TO.includes(p.res)).length;
+  const runs=all.filter(p=>p.rp==='R').length,passes=all.filter(p=>p.rp==='P').length;
+  const T=[[def?'Explosives allowed':'Explosive plays',ex.length],['Explosive rate',pct(ex.length,all.length)],[`Runs ${S.rules.er}+`,`${run.length} (${pct(run.length,runs)})`],[`Passes ${S.rules.ep}+`,`${pass.length} (${pct(pass.length,passes)})`],['Yards on explosives',yds],['Went for TD',td]];
+  const mix=(title,key)=>{const m=group(all,key);const rows=[...m].map(([k,l])=>[k,l.length,l.filter(p=>p.ex)]).filter(x=>x[2].length).sort((a,b)=>b[2].length-a[2].length||a[1]-b[1]);
+    return`<h3>${esc(title)}</h3>${rows.length?`<div class="scroll"><table class="stack"><thead><tr><th>${esc(title.split(' by ').pop())}</th><th class="n">Explosives</th><th class="n">Of plays</th><th class="n">Rate</th><th class="n">Yds</th></tr></thead><tbody>${rows.map(([k,n,l])=>`<tr><td><b>${esc(k)}</b></td><td class="n">${l.length}</td><td class="n">${n}</td><td class="n">${pct(l.length,n)}</td><td class="n">${l.reduce((s,p)=>s+(+p.gain||0),0)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="note">None yet.</p>'}`};
+  const callOf=p=>p.mcs?`${p.mcs} · ${(S.lib.find(e=>e.u===p.odk&&e.id===p.mcs)||{}).call||callTxt(p)}`:(p.f.play||callTxt(p)||'(no call)');
+  return`<details class="card ex" open><summary><h3 style="display:inline">${def?'Explosive plays allowed':'Explosive plays'}</h3> <span class="note">run ${S.rules.er}+ yds · pass ${S.rules.ep}+ yds — change in Setup</span></summary>
+  <div class="tiles">${T.map(([k,v])=>`<div class="tile"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>
+  ${ex.length?`<div class="scroll"><table class="stack"><thead><tr><th>#</th><th>Q</th><th>D&amp;D</th><th>Yard ln</th><th>${def?'Their play':'Call'}</th><th>Formation</th><th>${def?'Our call':'Defense'}</th><th>Result</th><th class="n">Gain</th></tr></thead><tbody>${ex.sort((a,b)=>(+b.gain||0)-(+a.gain||0)).map(p=>`<tr><td>${p.n}</td><td>${p.qtr}</td><td>${esc(p.down+'&'+p.dist)}</td><td>${esc(p.yl)}</td><td>${esc(def?(p.f.play||'—'):callOf(p))}</td><td>${esc([p.f.pers,p.f.form].filter(Boolean).join(' '))}</td><td>${esc(def?(p.mcs?p.mcs+' · ':'')+[p.f.front,p.f.stunt,p.f.blitz,p.f.cover].filter(Boolean).join(' '):[p.f.front,p.f.blitz,p.f.cover].filter(Boolean).join(' '))}</td><td>${esc(p.res)}</td><td class="n"><b>${esc(p.gain)}</b></td></tr>`).join('')}</tbody></table></div>`:`<p class="note">No explosive plays ${def?'allowed':''} yet.</p>`}
+  ${ex.length?`<div class="two"><div>${mix(def?'Explosives allowed by our coverage':'Explosives by coverage faced',p=>p.f.cover||'(not charted)')}${mix(def?'Explosives allowed by our front':'Explosives by front faced',p=>p.f.front||'(not charted)')}${def?mix('Explosives allowed by blitz',p=>p.f.blitz||'No blitz'):''}</div><div>${mix(def?'Explosives allowed by their formation family':'Explosives by formation family',p=>p.ffam||p.f.form||'(not charted)')}${mix(def?'Explosives allowed by their concept':'Explosives by concept',p=>p.pfam||'(not charted)')}${mix('Explosives by field zone',p=>p.zone||'(no yard line)')}${mix('Explosives by down & distance',p=>p.bk)}</div></div>`:''}</details>`}
 function vOff(ps){const o=ps.filter(p=>p.odk==='O');
-  $('v-off').innerHTML=`<h2>${esc(S.us)} offense</h2>${tiles(o)}${KEY}
+  $('v-off').innerHTML=`<h2>${esc(S.us)} offense</h2>${tiles(o)}${explosives(o)}${KEY}
   <div class="two"><div>${table('Offense by down & distance',group(o,p=>p.bk),{order:BUCKETS,extra:['Top calls',l=>top(l,p=>p.f.play)]})}</div>
   <div>${table('Offense by field zone',group(o,p=>p.zone))}${table('Offense by schedule',group(o,p=>p.sch))}</div>
   <div>${table('Run game by concept',group(o.filter(p=>p.rp==='R'),p=>p.pfam))}</div>
   <div>${table('Pass game by family',group(o.filter(p=>p.rp==='P'),p=>p.pfam),{extra:['Comp / att',l=>{const a=agg(l);return`${a.cmp}/${a.att}`}]})}</div>
   <div>${table('Offense by formation family',group(o,p=>p.ffam||p.f.form))}</div><div>${table('Offense by personnel',group(o,p=>p.f.pers))}</div></div>
-  <h3>What the defense showed us</h3><div class="scroll"><table class="stack"><thead><tr><th>Down &amp; distance</th><th class="n">Plays</th><th>Fronts</th><th>Coverage</th><th>Shell</th><th class="n">Blitz</th></tr></thead><tbody>${
-   [...group(o,p=>p.bk)].sort((a,b)=>BUCKETS.indexOf(a[0])-BUCKETS.indexOf(b[0])).map(([k,l])=>`<tr><td><b>${esc(k)}</b></td><td class="n">${l.length}</td><td>${top(l,p=>p.f.front)}</td><td>${top(l,p=>p.f.cover)}</td><td>${top(l,p=>p.cfam)}</td><td class="n">${pct(l.filter(p=>p.f.blitz).length,l.length)}</td></tr>`).join('')}</tbody></table></div>`}
+  <h3>What the defense showed us</h3><p class="note">Fronts, coverages and pressure they played against each of our situations, personnel groups and formations — with our success against it.</p>
+  ${showed('By down & distance',group(o,p=>p.bk),BUCKETS)}<div class="two"><div>${showed('By our personnel',group(o,p=>p.f.pers))}</div><div>${showed('By our formation family',group(o,p=>p.ffam||p.f.form))}</div></div>${showed('By our formation',group(o,p=>p.f.form))}`}
+function showed(title,m,order){let rows=[...m];rows=order?rows.sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])):rows.sort((a,b)=>b[1].length-a[1].length);
+  if(!rows.length)return`<h3>${esc(title)}</h3><p class="note">No plays yet.</p>`;
+  return`<h3>${esc(title)}</h3><div class="scroll"><table class="stack"><thead><tr><th>${esc(title.replace(/^By (our )?/,''))}</th><th class="n">Plays</th><th>Def pers</th><th>Fronts</th><th>Coverage</th><th>Shell</th><th class="n">Blitz</th><th class="n">Our success</th></tr></thead><tbody>${rows.map(([k,l])=>{const a=agg(l);return`<tr><td><b>${esc(k)}</b></td><td class="n">${l.length}</td><td>${top(l,p=>p.f.dpers)}</td><td>${top(l,p=>p.f.front)}</td><td>${top(l,p=>p.f.cover)}</td><td>${top(l,p=>p.cfam)}</td><td class="n">${pct(l.filter(p=>p.f.blitz).length,l.length)}</td><td class="n">${pct(a.ok,a.n)}</td></tr>`}).join('')}</tbody></table></div>`}
 function vDef(ps){const d=ps.filter(p=>p.odk==='D');
-  $('v-def').innerHTML=`<h2>${esc(S.us)} defense <span class="note">— offense not staying on schedule counts as a win</span></h2>${tiles(d,true)}${KEY}
+  $('v-def').innerHTML=`<h2>${esc(S.us)} defense <span class="note">— offense not staying on schedule counts as a win</span></h2>${tiles(d,true)}${explosives(d,true)}${KEY}
   <div class="two"><div>${table('Opponent by down & distance',group(d,p=>p.bk),{order:BUCKETS,def:true,extra:['Their top plays',l=>top(l,p=>p.f.play)]})}</div>
   <div>${table('Opponent by formation family',group(d,p=>p.ffam||p.f.form),{def:true,extra:['Top plays',l=>top(l,p=>p.f.play)]})}${table('Opponent by personnel',group(d,p=>p.f.pers),{def:true})}</div>
   <div>${table('Our calls by front',group(d,p=>p.f.front),{def:true})}${table('Our calls by stunt',group(d,p=>p.f.stunt),{def:true})}</div>
@@ -457,7 +473,7 @@ function sampleGame(){buildVocab();let s=7;const rnd=()=>(s=(s*16807)%2147483647
       front:pick(['OVER','UNDER','TITE','BEAR']),cover:pick(['COVER 3','COVER 1','QUARTERS','COVER 2','COVER 3']),blitz:rnd()<.25?pick(['MIKE FIRE','CAT','SAM']):'',stunt:rnd()<.2?pick(['TEX','PINCH']):''};
     if(L){for(const k of['pers','form','back','motion','play','prot'])delete f[k];Object.assign(f,parseCall(L.call).out)}
     if(DL){for(const k of['dpers','front','stunt','blitz','cover'])delete f[k];Object.assign(f,parseCall(DL.call).out)}
-    if(f.form==='EMPTY'&&!L)f.back='GUN';if(pass&&rnd()<.5)f.prot=pick(['SLIDE','HALF','MAX']);if(odk==='D')f.dpers=pick(['BASE','NICKEL','NICKEL']);
+    if(f.form==='EMPTY'&&!L)f.back='GUN';if(pass&&rnd()<.5)f.prot=pick(['SLIDE','HALF','MAX']);f.dpers=pick(['BASE','NICKEL','NICKEL']);
     const end=/TD|INT|Fumble/.test(res)||(d===4);
     add({odk,ser,down:d,dist:x,yl:fromYtg(y),mcs:L?L.id:DL?DL.id:'',wb:L?wbOf(L.id,'O'):DL?wbOf(DL.id,'D'):'',type:pass?'Pass':'Run',res,gain:String(g),f,end:false,ball:pick(['4','22','8','11','3','85']),qb:pass?'12':'',tk:odk==='D'?pick(['44','32','5','9','52']):''});
     if(end){S.plays[S.plays.length-1].end=true;ser++;return res}
