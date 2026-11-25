@@ -89,6 +89,7 @@ table.pr td{padding:4px 3px;vertical-align:middle}
 #secs button.on{background:var(--red);border-color:var(--red);color:#fff}
 .rsp{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;margin-top:4px;line-height:1.3}.rl{color:var(--red)}.ro{color:var(--mute)}.sc.big .rsp{font-size:15px}
 details.ex{margin:0 0 18px}details.ex summary{cursor:pointer;list-style-position:outside}details.ex .tiles{margin-top:10px}
+button.dl{all:unset;cursor:pointer;font-weight:700;color:var(--ink);border-bottom:2px solid var(--red);padding-bottom:1px}button.dl:hover{color:var(--red)}button.dl:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .tag{display:inline-block;font-size:12px;font-weight:700;padding:1px 7px;border-radius:4px;background:var(--chip)}
 .tag.O{background:var(--ink);color:var(--bg)}.tag.D{background:var(--red);color:#fff}
 @media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;color:var(--mute)}.stack td:empty{display:none}}
@@ -322,7 +323,7 @@ function table(title,m,{order,def=false,extra,sort=true}={}){
   if(!rows.length)return`<h3>${esc(title)}</h3><p class="note">No plays yet.</p>`;
   const sl=def?'Def win':'Success';
   return`<h3>${esc(title)}</h3><div class="scroll"><table class="stack"><thead><tr><th>${esc(title.split(/ by | vs /).pop())}</th><th class="n">Plays</th><th>Run / pass</th><th class="n">Yds</th><th class="n">Avg</th><th class="n">${sl}</th><th class="n">Expl</th>${extra?`<th>${extra[0]}</th>`:''}</tr></thead><tbody>${rows.map(([k,l])=>{const a=agg(l);if(!a.n)return'';
-   return`<tr><td><b>${esc(k)}</b></td><td class="n">${a.n}</td><td>${a.run}–${a.pass}${rpBar(a)}</td><td class="n">${a.yds}</td><td class="n">${r1(a.avg)}</td><td class="n">${def?pct(a.n-a.ok,a.n):pct(a.ok,a.n)}</td><td class="n">${a.ex}</td>${extra?`<td>${extra[1](l)}</td>`:''}</tr>`}).join('')}</tbody></table></div>`}
+   return`<tr><td>${dl(title,k,l)}</td><td class="n">${a.n}</td><td>${a.run}–${a.pass}${rpBar(a)}</td><td class="n">${a.yds}</td><td class="n">${r1(a.avg)}</td><td class="n">${def?pct(a.n-a.ok,a.n):pct(a.ok,a.n)}</td><td class="n">${a.ex}</td>${extra?`<td>${extra[1](l)}</td>`:''}</tr>`}).join('')}</tbody></table></div>`}
 function tiles(list,def){const a=agg(list);const t3=list.filter(p=>+p.down===3&&!p.pen),c3=t3.filter(p=>(+p.gain||0)>=+p.dist||/TD/.test(p.res)&&!TO.includes(p.res));
   const T=[['Plays',a.n],['Yards',a.yds],['Yds / play',r1(a.avg)],[def?'Def win rate':'Success rate',def?pct(a.n-a.ok,a.n):pct(a.ok,a.n)],[def?'Explosives allowed':'Explosive plays',a.ex],['3rd down',`${c3.length}/${t3.length}`],['Run–pass',`${a.run}–${a.pass}`],['Turnovers',a.to]];
   return`<div class="tiles">${T.map(([k,v])=>`<div class="tile"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`}
@@ -334,7 +335,7 @@ function explosives(list,def){const all=list.filter(p=>!p.pen&&!(p.gain===''&&p.
   const runs=all.filter(p=>p.rp==='R').length,passes=all.filter(p=>p.rp==='P').length;
   const T=[[def?'Explosives allowed':'Explosive plays',ex.length],['Explosive rate',pct(ex.length,all.length)],[`Runs ${S.rules.er}+`,`${run.length} (${pct(run.length,runs)})`],[`Passes ${S.rules.ep}+`,`${pass.length} (${pct(pass.length,passes)})`],['Yards on explosives',yds],['Went for TD',td]];
   const mix=(title,key)=>{const m=group(all,key);const rows=[...m].map(([k,l])=>[k,l.length,l.filter(p=>p.ex)]).filter(x=>x[2].length).sort((a,b)=>b[2].length-a[2].length||a[1]-b[1]);
-    return`<h3>${esc(title)}</h3>${rows.length?`<div class="scroll"><table class="stack"><thead><tr><th>${esc(title.split(' by ').pop())}</th><th class="n">Explosives</th><th class="n">Of plays</th><th class="n">Rate</th><th class="n">Yds</th></tr></thead><tbody>${rows.map(([k,n,l])=>`<tr><td><b>${esc(k)}</b></td><td class="n">${l.length}</td><td class="n">${n}</td><td class="n">${pct(l.length,n)}</td><td class="n">${l.reduce((s,p)=>s+(+p.gain||0),0)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="note">None yet.</p>'}`};
+    return`<h3>${esc(title)}</h3>${rows.length?`<div class="scroll"><table class="stack"><thead><tr><th>${esc(title.split(' by ').pop())}</th><th class="n">Explosives</th><th class="n">Of plays</th><th class="n">Rate</th><th class="n">Yds</th></tr></thead><tbody>${rows.map(([k,n,l])=>`<tr><td>${dl(title,k,l)}</td><td class="n">${l.length}</td><td class="n">${n}</td><td class="n">${pct(l.length,n)}</td><td class="n">${l.reduce((s,p)=>s+(+p.gain||0),0)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="note">None yet.</p>'}`};
   const callOf=p=>p.mcs?`${p.mcs} · ${(S.lib.find(e=>e.u===p.odk&&e.id===p.mcs)||{}).call||callTxt(p)}`:(p.f.play||callTxt(p)||'(no call)');
   return`<details class="card ex" open><summary><h3 style="display:inline">${def?'Explosive plays allowed':'Explosive plays'}</h3> <span class="note">run ${S.rules.er}+ yds · pass ${S.rules.ep}+ yds — change in Setup</span></summary>
   <div class="tiles">${T.map(([k,v])=>`<div class="tile"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>
@@ -351,7 +352,7 @@ function vOff(ps){const o=ps.filter(p=>p.odk==='O');
   ${showed('By down & distance',group(o,p=>p.bk),BUCKETS)}<div class="two"><div>${showed('By our personnel',group(o,p=>p.f.pers))}</div><div>${showed('By our formation family',group(o,p=>p.ffam||p.f.form))}</div></div>${showed('By our formation',group(o,p=>p.f.form))}`}
 function showed(title,m,order){let rows=[...m];rows=order?rows.sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])):rows.sort((a,b)=>b[1].length-a[1].length);
   if(!rows.length)return`<h3>${esc(title)}</h3><p class="note">No plays yet.</p>`;
-  return`<h3>${esc(title)}</h3><div class="scroll"><table class="stack"><thead><tr><th>${esc(title.replace(/^By (our )?/,''))}</th><th class="n">Plays</th><th>Def pers</th><th>Fronts</th><th>Coverage</th><th>Shell</th><th class="n">Blitz</th><th class="n">Our success</th></tr></thead><tbody>${rows.map(([k,l])=>{const a=agg(l);return`<tr><td><b>${esc(k)}</b></td><td class="n">${l.length}</td><td>${top(l,p=>p.f.dpers)}</td><td>${top(l,p=>p.f.front)}</td><td>${top(l,p=>p.f.cover)}</td><td>${top(l,p=>p.cfam)}</td><td class="n">${pct(l.filter(p=>p.f.blitz).length,l.length)}</td><td class="n">${pct(a.ok,a.n)}</td></tr>`}).join('')}</tbody></table></div>`}
+  return`<h3>${esc(title)}</h3><div class="scroll"><table class="stack"><thead><tr><th>${esc(title.replace(/^By (our )?/,''))}</th><th class="n">Plays</th><th>Def pers</th><th>Fronts</th><th>Coverage</th><th>Shell</th><th class="n">Blitz</th><th class="n">Our success</th></tr></thead><tbody>${rows.map(([k,l])=>{const a=agg(l);return`<tr><td>${dl(title,k,l)}</td><td class="n">${l.length}</td><td>${top(l,p=>p.f.dpers)}</td><td>${top(l,p=>p.f.front)}</td><td>${top(l,p=>p.f.cover)}</td><td>${top(l,p=>p.cfam)}</td><td class="n">${pct(l.filter(p=>p.f.blitz).length,l.length)}</td><td class="n">${pct(a.ok,a.n)}</td></tr>`}).join('')}</tbody></table></div>`}
 function vDef(ps){const d=ps.filter(p=>p.odk==='D');
   $('v-def').innerHTML=`<h2>${esc(S.us)} defense <span class="note">— offense not staying on schedule counts as a win</span></h2>${tiles(d,true)}${explosives(d,true)}${KEY}
   <div class="two"><div>${table('Opponent by down & distance',group(d,p=>p.bk),{order:BUCKETS,def:true,extra:['Their top plays',l=>top(l,p=>p.f.play)]})}</div>
@@ -362,7 +363,7 @@ function vDef(ps){const d=ps.filter(p=>p.odk==='D');
 function vSt(ps){const k=ps.filter(p=>p.odk==='K');const m=group(k,p=>p.type);
   const row=(t,l)=>{const ky=l.filter(p=>p.ky!==''&&p.ky!=null).map(p=>+p.ky),ry=l.filter(p=>p.ry!==''&&p.ry!=null).map(p=>+p.ry),av=a=>a.length?r1(a.reduce((s,x)=>s+x,0)/a.length):'–';
    const net=/Punt/.test(t)&&ky.length?r1((ky.reduce((s,x)=>s+x,0)-ry.reduce((s,x)=>s+x,0))/l.length):'–';
-   return`<tr><td><b>${esc(t)}</b></td><td class="n">${l.length}</td><td class="n">${av(ky)}</td><td class="n">${av(ry)}</td><td class="n">${net}</td><td>${top(l,p=>p.res,4)}</td></tr>`};
+   return`<tr><td>${dl('Special teams',t,l)}</td><td class="n">${l.length}</td><td class="n">${av(ky)}</td><td class="n">${av(ry)}</td><td class="n">${net}</td><td>${top(l,p=>p.res,4)}</td></tr>`};
   $('v-st').innerHTML=`<h2>Special teams</h2><div class="scroll"><table class="stack"><thead><tr><th>Phase</th><th class="n">Plays</th><th class="n">Avg kick</th><th class="n">Avg return</th><th class="n">Net</th><th>Results</th></tr></thead><tbody>${KT.filter(t=>m.has(t)).map(t=>row(t,m.get(t))).join('')||'<tr><td>No kicks yet.</td></tr>'}</tbody></table></div>
   <p class="note">Net = (kick yards − return yards) ÷ punts. Enter kick and return yards on each rep to fill these in.</p>`}
 function pTable(title,rows,cols){const r=[...rows.entries()].filter(([k])=>k).sort((a,b)=>b[1][1]-a[1][1]);
@@ -718,13 +719,25 @@ function importScript(t,sc){let hm=null,per='',n=0,nl=0;const before=S.lib.lengt
     sc.rows.push({per,call,look,hash:g('H'),down:g('D'),dist:g('DIS'),fp:g('FP'),note:''});n++}
   nl=S.lib.length-before;return hm?`Added ${n} reps${nl?` · ${nl} new calls/looks added to the library (no drawings yet)`:''}.`:'Couldn’t find the header row (MCS # …). Copy it along with the reps.'}
 function lookUses(id,u){let n=0;const pu=Object.keys(LOOKU).find(k=>LOOKU[k]===u);for(const s of S.scripts)if(s.u===pu)for(const r of s.rows)if(r.look===id)n++;return n}
+
+/* ---------- drill-down ---------- */
+let DRILL=new Map(),drillN=0,drillOpen=null;
+function dl(title,k,l){const id='g'+(++drillN);DRILL.set(id,{title:String(title).replace(/^(Results|Offense|Opponent|Our calls|Defense|Run game|Pass game|Special teams) /,'').replace(/^by /,''),k,l:[...l]});return`<button type="button" class="dl" data-g="${id}" title="Show every play">${esc(k)}</button>`}
+function drillHtml(){const d=drillOpen;if(!d)return'';const l=[...d.l].sort((a,b)=>a.n-b.n);const k=l.every(p=>p.odk==='K');const a=agg(l);const def=l.length&&l.every(p=>p.odk==='D');
+  return`<div class="ov" id="dov"><div class="ovin card" style="max-height:90vh"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(d.k)} <span class="note" style="font:500 15px Barlow">${esc(d.title)} · ${l.length} play${l.length===1?'':'s'}</span></h2><button id="dovX">Close</button></div>
+   ${k?'':`<p class="note">Run ${a.run} · pass ${a.pass} · ${a.yds} yds · ${r1(a.avg)} per play · ${def?'def win '+pct(a.n-a.ok,a.n):'success '+pct(a.ok,a.n)} · explosives ${a.ex}. Tap a play to edit it.</p>`}
+   <div class="scroll"><table class="stack log"><thead><tr><th>#</th><th>Q</th><th>Unit</th><th>D&amp;D</th><th>Yard ln</th><th>Hash</th><th>WB</th><th>${def?'Their play':'Call'}</th><th>${def?'Our call':'Defense'}</th><th>Result</th><th class="n">${k?'Kick':'Gain'}</th><th>Eff</th></tr></thead><tbody>${l.map(p=>`<tr data-n="${p.n}"><td>${p.n}</td><td>${p.qtr}</td><td><span class="tag ${p.odk}">${p.odk}</span></td><td>${p.odk==='K'?esc(p.type):esc(p.down+'&'+p.dist)}</td><td>${esc(p.yl)}</td><td>${esc(p.hash)}</td><td>${p.flip?'F':''}${esc(p.wb||'')}</td><td>${esc((p.odk==='O'&&p.mcs?p.mcs+' · ':'')+(p.odk==='K'?callTxt(p):(p.odk==='O'&&p.raw?p.raw:['pers','form','back','motion','play','prot'].map(k=>p.f[k]).filter(Boolean).join(' '))))}</td><td>${esc((p.odk==='D'&&p.mcs?p.mcs+' · ':'')+[p.f.dpers,p.f.front,p.f.stunt,p.f.blitz,p.f.cover].filter(Boolean).join(' '))}</td><td>${esc(p.res)}</td><td class="n">${p.odk==='K'?esc(p.ky||''):esc(p.gain)}</td><td>${p.ok==null?'':p.ok?'Y':'N'}</td></tr>`).join('')}</tbody></table></div></div></div>`}
+function showDrill(){let o=$('dov');if(o)o.remove();if(!drillOpen)return;document.body.insertAdjacentHTML('beforeend',drillHtml());
+  $('dovX').onclick=()=>{drillOpen=null;showDrill()};$('dov').onclick=ev=>{if(ev.target.id==='dov'){drillOpen=null;showDrill();return}const tr=ev.target.closest('tr[data-n]');if(tr){drillOpen=null;showDrill();loadForEdit(+tr.dataset.n)}}}
+document.addEventListener('click',ev=>{const b=ev.target.closest('button.dl');if(!b)return;const d=DRILL.get(b.dataset.g);if(d){drillOpen=d;showDrill()}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&drillOpen){drillOpen=null;showDrill()}});
 /* ---------- render + events ---------- */
 let tab='chart';
 const SECS=[['game','Game day',[['chart','Chart'],['log','Play log'],['off','Offense'],['def','Defense'],['st','Special teams'],['ply','Players']]],['prac','Practice',[['pr','Scripts'],['cards','Scout cards']]],['book','Playbook',[['cs','Call sheet'],['lib','Library']]],['set','Setup',[['setup','Terminology & cards']]]];
 const secOf=t=>SECS.find(s=>s[2].some(x=>x[0]===t));const lastTab={};
 function show(t){tab=t;const sc=secOf(t)||SECS[0];lastTab[sc[0]]=t;$('secs').innerHTML=SECS.map(s=>`<button data-s="${s[0]}" class="${s===sc?'on':''}">${s[1]}</button>`).join('');$('tabs').innerHTML=sc[2].map(([k,l])=>`<button data-t="${k}" class="${k===t?'on':''}">${l}</button>`).join('');document.querySelector('.top').classList.toggle('nogame',sc[0]!=='game');for(const s of document.querySelectorAll('main>section'))s.classList.toggle('hide',s.id!=='v-'+t);try{history.replaceState(null,'','#'+t)}catch(e){}render()}
 function renderRead(){vRead(derive())}
-function render(){buildVocab();const ps=derive();const[u,t]=score(ps);
+function render(){DRILL=new Map();drillN=0;buildVocab();const ps=derive();const[u,t]=score(ps);
   $('us').value=S.us;$('opp').value=S.opp;$('sUs').textContent=u;$('sThem').textContent=t;
   const e=S.e;$('sit').textContent=e.odk==='K'?`Q${e.qtr} · ${e.type}`:`Q${e.qtr} · ${({O:S.us,D:S.opp})[e.odk]} ball · ${e.pendFrom?'enter the yard line':e.down+'&'+e.dist}${e.yl!==''?' at '+(+e.yl>0?'+':'')+e.yl:''} · ${e.hash} hash`;
   if(tab==='chart'){renderEntry();vRead(ps);
